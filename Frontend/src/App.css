@@ -1,0 +1,37 @@
+/* 
+  App specific CSS
+  Most styling is handled by Material UI
+*/
+
+/* For custom animations if needed */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+/* Custom classes for coloring financial data */
+.income-amount {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.expense-amount {
+  color: #f44336;
+  font-weight: 500;
+}
+
+.tax-amount {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .container {
+    padding: 8px;
+  }
+}
