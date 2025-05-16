@@ -8,7 +8,7 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 
 const AZURE_ENDPOINT = 'https://reactocr.cognitiveservices.azure.com/';
-const AZURE_API_KEY = '9qd1oZKopZUGpi6SIVo909gIPrRJztPmSwvLPqXj1JMhdKTktMOWJQQJ99BEACYeBjFXJ3w3AAALACOGXt3N';
+const AZURE_API_KEY = 'YOUR_API_KEY';
 
 app.use(cors());
 
