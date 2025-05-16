@@ -5,24 +5,21 @@ import CssBaseline from '@mui/material/CssBaseline';
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  // Try to load darkMode preference from localStorage
   const [darkMode, setDarkMode] = useState(() => {
     const savedDarkMode = localStorage.getItem('darkMode');
-    return savedDarkMode ? JSON.parse(savedDarkMode) : 
-           window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return savedDarkMode ? JSON.parse(savedDarkMode) : false;
   });
 
-  // Save darkMode preference to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    document.body.classList.toggle('dark-theme', darkMode);
+    document.body.classList.toggle('light-theme', !darkMode);
   }, [darkMode]);
 
-  // Toggle dark mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
-  // Create the theme based on darkMode
   const theme = useMemo(
     () =>
       createTheme({
@@ -38,12 +35,37 @@ export const ThemeProvider = ({ children }) => {
             default: darkMode ? '#121212' : '#f5f5f5',
             paper: darkMode ? '#1e1e1e' : '#ffffff',
           },
+          text: {
+            primary: darkMode ? '#ffffff' : '#000000',
+            secondary: darkMode ? '#b0b0b0' : '#666666',
+          },
         },
         components: {
           MuiAppBar: {
             styleOverrides: {
               root: {
                 backgroundColor: darkMode ? '#272727' : '#1976d2',
+              },
+            },
+          },
+          MuiPaper: {
+            styleOverrides: {
+              root: {
+                backgroundColor: darkMode ? '#1e1e1e' : '#ffffff',
+              },
+            },
+          },
+          MuiCard: {
+            styleOverrides: {
+              root: {
+                backgroundColor: darkMode ? '#1e1e1e' : '#ffffff',
+              },
+            },
+          },
+          MuiDrawer: {
+            styleOverrides: {
+              paper: {
+                backgroundColor: darkMode ? '#1e1e1e' : '#ffffff',
               },
             },
           },

@@ -11,7 +11,6 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Switch,
   useMediaQuery,
   useTheme,
   Button
@@ -21,12 +20,10 @@ import HomeIcon from '@mui/icons-material/Home';
 import SettingsIcon from '@mui/icons-material/Settings';
 import InfoIcon from '@mui/icons-material/Info';
 import PersonIcon from '@mui/icons-material/Person';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { ThemeContext } from '../contexts/ThemeContext';
 
 const Navbar = () => {
-  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { darkMode } = useContext(ThemeContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -59,17 +56,6 @@ const Navbar = () => {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-        <ListItem>
-          <ListItemIcon>
-            {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </ListItemIcon>
-          <ListItemText primary="Karanlık Mod" />
-          <Switch 
-            checked={darkMode} 
-            onChange={toggleDarkMode} 
-            color="primary" 
-          />
-        </ListItem>
       </List>
     </Box>
   );
@@ -107,13 +93,6 @@ const Navbar = () => {
                   {item.text}
                 </Button>
               ))}
-              <IconButton 
-                color="inherit" 
-                onClick={toggleDarkMode}
-                aria-label={darkMode ? "light mode" : "dark mode"}
-              >
-                {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
             </Box>
           )}
         </Toolbar>
@@ -125,7 +104,7 @@ const Navbar = () => {
           open={drawerOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
         >
           {drawer}

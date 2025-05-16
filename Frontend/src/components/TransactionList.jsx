@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Paper,
   Typography,
   List,
   ListItem,
@@ -9,10 +8,12 @@ import {
   IconButton,
   Collapse,
   Box,
-  Chip,
-  Divider
+  useTheme,
+  useMediaQuery,
+  Tooltip,
+  Fade
 } from '@mui/material';
-import { Delete, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Delete, ExpandMore, ExpandLess, AttachMoney } from '@mui/icons-material';
 import { useContext } from 'react';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
@@ -44,6 +45,8 @@ const categoryLabels = {
 const TransactionList = ({ type }) => {
   const { expenses, incomes, deleteExpense, deleteIncome } = useContext(FinanceContext);
   const { darkMode } = useContext(ThemeContext);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [expandedCategories, setExpandedCategories] = useState({});
 
   const transactions = type === 'income' ? incomes : expenses;
@@ -83,25 +86,45 @@ const TransactionList = ({ type }) => {
             button
             onClick={() => toggleCategory(category)}
             sx={{
-              bgcolor: darkMode ? 'grey.700' : 'grey.100',
+              bgcolor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
               mb: 1,
-              borderRadius: 1,
-              borderLeft: `4px solid ${categoryColors[category]}`
+              borderRadius: 2,
+              borderLeft: `4px solid ${categoryColors[category]}`,
+              transition: 'all 0.2s',
+              '&:hover': {
+                bgcolor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                transform: 'translateX(5px)'
+              }
             }}
           >
             <ListItemText
               primary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'flex-start' : 'center', 
+                  gap: 1 
+                }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                     {categoryLabels[category]}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Toplam: ₺{categoryTotals[category].toFixed(2)}
-                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    gap: 0.5,
+                    color: type === 'income' ? theme.palette.success.main : theme.palette.error.main
+                  }}>
+                    <AttachMoney fontSize="small" />
+                    <Typography variant="body2">
+                      {categoryTotals[category].toLocaleString('tr-TR')} ₺
+                    </Typography>
+                  </Box>
                 </Box>
               }
             />
-            {expandedCategories[category] ? <ExpandLess /> : <ExpandMore />}
+            <Fade in={true}>
+              {expandedCategories[category] ? <ExpandLess /> : <ExpandMore />}
+            </Fade>
           </ListItem>
           <Collapse in={expandedCategories[category]} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
@@ -112,32 +135,76 @@ const TransactionList = ({ type }) => {
                     pl: 4,
                     borderLeft: `4px solid ${categoryColors[category]}`,
                     mb: 1,
-                    bgcolor: darkMode ? 'grey.700' : 'grey.50'
+                    bgcolor: darkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                    borderRadius: 2,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                      transform: 'translateX(5px)'
+                    }
                   }}
                 >
                   <ListItemText
-                    primary={transaction.description}
+                    primary={
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {transaction.description}
+                      </Typography>
+                    }
                     secondary={
-                      <>
-                        <Typography component="span" variant="body2" color="text.secondary">
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: isMobile ? 0.5 : 1,
+                        mt: 0.5
+                      }}>
+                        <Typography 
+                          component="span" 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5
+                          }}
+                        >
                           {formatDate(transaction.date)}
                         </Typography>
-                        {' - '}
-                        <Typography component="span" variant="body2" color="text.secondary">
-                          ₺{transaction.amount.toFixed(2)}
+                        <Typography 
+                          component="span" 
+                          variant="body2" 
+                          color={type === 'income' ? 'success.main' : 'error.main'}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            fontWeight: 500
+                          }}
+                        >
+                          <AttachMoney fontSize="small" />
+                          {transaction.amount.toLocaleString('tr-TR')} ₺
                         </Typography>
-                      </>
+                      </Box>
                     }
                   />
                   <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      onClick={() => type === 'income' ? deleteIncome(transaction.id) : deleteExpense(transaction.id)}
-                      color="error"
-                    >
-                      <Delete />
-                    </IconButton>
+                    <Tooltip title="Sil" arrow>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => type === 'income' ? deleteIncome(transaction.id) : deleteExpense(transaction.id)}
+                        color="error"
+                        size={isMobile ? "small" : "medium"}
+                        sx={{
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                            bgcolor: 'error.light'
+                          }
+                        }}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
                   </ListItemSecondaryAction>
                 </ListItem>
               ))}
