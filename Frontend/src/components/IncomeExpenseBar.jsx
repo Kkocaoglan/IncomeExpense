@@ -3,6 +3,15 @@ import { Box, Paper, Typography } from '@mui/material';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
 const IncomeExpenseBar = () => {
   const { incomes, expenses } = useContext(FinanceContext);
   const { darkMode } = useContext(ThemeContext);
@@ -34,13 +43,13 @@ const IncomeExpenseBar = () => {
           Gelir
         </Typography>
         <Typography variant="body1" sx={{ mb: 1 }}>
-          Toplam: <strong>{totalIncome.toLocaleString('tr-TR')} ₺</strong>
+          Toplam: <strong>{formatCurrency(totalIncome)}</strong>
         </Typography>
         <Typography variant="body2" color="success.main">
-          Net: {netIncome.toLocaleString('tr-TR')} ₺
+          Net: {formatCurrency(netIncome)}
         </Typography>
         <Typography variant="body2" color="error.main">
-          Vergi: {totalTaxIncome.toLocaleString('tr-TR')} ₺
+          Vergi: {formatCurrency(totalTaxIncome)}
         </Typography>
         <Box 
           sx={{ 
@@ -86,13 +95,13 @@ const IncomeExpenseBar = () => {
           Gider
         </Typography>
         <Typography variant="body1" sx={{ mb: 1 }}>
-          Toplam: <strong>{totalExpense.toLocaleString('tr-TR')} ₺</strong>
+          Toplam: <strong>{formatCurrency(totalExpense)}</strong>
         </Typography>
         <Typography variant="body2" color="error.main">
-          Ana Miktar: {netExpense.toLocaleString('tr-TR')} ₺
+          Ana Miktar: {formatCurrency(netExpense)}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Vergi: {totalTaxExpense.toLocaleString('tr-TR')} ₺
+          Vergi: {formatCurrency(totalTaxExpense)}
         </Typography>
         <Box 
           sx={{ 

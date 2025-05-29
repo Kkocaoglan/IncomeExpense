@@ -13,7 +13,7 @@ import {
   Tooltip,
   Fade
 } from '@mui/material';
-import { Delete, ExpandMore, ExpandLess, AttachMoney } from '@mui/icons-material';
+import { Delete, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useContext } from 'react';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
@@ -40,6 +40,15 @@ const categoryLabels = {
   saglik: 'Sağlık',
   eglence: 'Eğlence',
   diger: 'Diğer'
+};
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 };
 
 const TransactionList = ({ type }) => {
@@ -114,9 +123,8 @@ const TransactionList = ({ type }) => {
                     gap: 0.5,
                     color: type === 'income' ? theme.palette.success.main : theme.palette.error.main
                   }}>
-                    <AttachMoney fontSize="small" />
                     <Typography variant="body2">
-                      {categoryTotals[category].toLocaleString('tr-TR')} ₺
+                      {formatCurrency(categoryTotals[category])}
                     </Typography>
                   </Box>
                 </Box>
@@ -160,18 +168,6 @@ const TransactionList = ({ type }) => {
                         <Typography 
                           component="span" 
                           variant="body2" 
-                          color="text.secondary"
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5
-                          }}
-                        >
-                          {formatDate(transaction.date)}
-                        </Typography>
-                        <Typography 
-                          component="span" 
-                          variant="body2" 
                           color={type === 'income' ? 'success.main' : 'error.main'}
                           sx={{ 
                             display: 'flex',
@@ -180,8 +176,20 @@ const TransactionList = ({ type }) => {
                             fontWeight: 500
                           }}
                         >
-                          <AttachMoney fontSize="small" />
-                          {transaction.amount.toLocaleString('tr-TR')} ₺
+                          {formatCurrency(transaction.amount)}
+                        </Typography>
+                        <Typography 
+                          component="span" 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5
+                          }}
+                        >
+                          {formatDate(transaction.date)}
+                          {formatCurrency(transaction.amount)}
                         </Typography>
                       </Box>
                     }
