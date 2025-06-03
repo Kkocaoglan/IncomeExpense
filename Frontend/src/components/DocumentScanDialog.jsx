@@ -107,10 +107,13 @@ const DocumentScanDialog = ({ open, handleClose, type }) => {
     setError(null);
     try {
       const { toplam, kdv } = await analyzeReceiptWithProxy(imageFile);
+      const parsedAmount = Number(toplam) || 0;
+      const parsedTax = Number(kdv) || 0;
+      
       setExtractedData({
         description: 'Fişten otomatik',
-        amount: toplam ? parseFloat(toplam) : 0,
-        tax: kdv ? parseFloat(kdv) : 0,
+        amount: parsedAmount,
+        tax: parsedTax,
         date: new Date().toISOString().split('T')[0],
         category: 'faturalar'
       });
@@ -128,19 +131,25 @@ const DocumentScanDialog = ({ open, handleClose, type }) => {
     try {
       const { toplam, kdv } = await analyzeReceiptWithProxy(documentFile);
       if (type === 'expense') {
+        const parsedAmount = Number(toplam) || 0;
+        const parsedTax = Number(kdv) || 0;
+        
         setExtractedData({
           description: 'Fişten otomatik',
-          amount: toplam ? parseFloat(toplam) : 0,
-          tax: kdv ? parseFloat(kdv) : 0,
+          amount: parsedAmount,
+          tax: parsedTax,
           date: new Date().toISOString().split('T')[0],
           category: 'faturalar'
         });
         setSelectedCategory('faturalar');
       } else {
+        const parsedAmount = Number(toplam) || 0;
+        const parsedTax = Number(kdv) || 0;
+        
         setExtractedData({
           description: 'Belge',
-          amount: toplam ? parseFloat(toplam) : 0,
-          tax: kdv ? parseFloat(kdv) : 0,
+          amount: parsedAmount,
+          tax: parsedTax,
           date: new Date().toISOString().split('T')[0],
           category: 'diger'
         });
