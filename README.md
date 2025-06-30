@@ -2,8 +2,7 @@
 
 Bu proje, kullanıcıların kişisel gelir ve giderlerini kolayca takip etmelerini sağlayan, React ve Node.js ile geliştirilmiş tam kapsamlı (full-stack) bir web uygulamasıdır.
 
-![Proje Ekran Görüntüsü](https://user-images.githubusercontent.com/33395032/142858852-53476472-a1f4-419b-a63e-108216599298.png)
-*(Not: Bu ekran görüntüsü temsilidir, kendi uygulamanızın ekran görüntüsünü ekleyebilirsiniz.)*
+![Proje Ekran Görüntüsü](https://github.com/user-attachments/assets/41155b6e-9042-4506-a560-c6022248ad0a)
 
 ## ✨ Özellikler
 
@@ -63,8 +62,8 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     ```
     **.env Dosyası İçeriği:**
     ```
-    MONGO_URI = sizin_mongodb_connection_stringiniz
-    JWT_SECRET = gizli_bir_anahtar_kelime_yazin
+    MONGO_URI=sizin_mongodb_connection_stringiniz
+    JWT_SECRET=gizli_bir_anahtar_kelime_yazin
     ```
     ```bash
     # Sunucuyu başlatın
@@ -83,4 +82,10 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
     # React uygulamasını başlatın
     npm start
     ```
-    Uygulama varsayılan olarak `http://localhost:3000` adresinde açılacaktır.
+    Uygulama varsayılan olarak tarayıcınızda `http://localhost:3000` adresinde açılacaktır.
+
+## 📝 Gelecek Planları ve İyileştirmeler
+
+- [ ] İşlemler için kategori ekleme (Fatura, Maaş, Alışveriş vb.).
+- [ ] Daha detaylı raporlama ve veri filtreleme özellikleri.
+- [ ] ...
