@@ -113,7 +113,6 @@ const DocumentScanDialog = ({ open, handleClose, type }) => {
       setExtractedData({
         description: 'Fişten otomatik',
         amount: parsedAmount,
-        tax: parsedTax,
         date: new Date().toISOString().split('T')[0],
         category: 'faturalar'
       });
@@ -137,7 +136,6 @@ const DocumentScanDialog = ({ open, handleClose, type }) => {
         setExtractedData({
           description: 'Fişten otomatik',
           amount: parsedAmount,
-          tax: parsedTax,
           date: new Date().toISOString().split('T')[0],
           category: 'faturalar'
         });
@@ -149,7 +147,6 @@ const DocumentScanDialog = ({ open, handleClose, type }) => {
         setExtractedData({
           description: 'Belge',
           amount: parsedAmount,
-          tax: parsedTax,
           date: new Date().toISOString().split('T')[0],
           category: 'diger'
         });
@@ -321,10 +318,6 @@ const DocumentScanDialog = ({ open, handleClose, type }) => {
               <Box>
                 <Typography variant="subtitle2">Tarih</Typography>
                 <Typography variant="body1">{extractedData.date}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2">Vergi</Typography>
-                <Typography variant="body1">₺{extractedData.tax.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ gridColumn: 'span 2' }}>
                 <FormControl fullWidth>

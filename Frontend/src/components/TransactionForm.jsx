@@ -41,39 +41,50 @@ const TransactionForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.description || !formData.amount) {
+    if (!formData.description.trim()) {
       setAlert({
         show: true,
-        message: 'Lütfen tüm alanları doldurun',
+        message: 'Lütfen açıklama girin (ör: Maaş, Kira, Market)',
         severity: 'error'
       });
       return;
     }
-
+    if (!formData.amount) {
+      setAlert({
+        show: true,
+        message: 'Lütfen tutar girin',
+        severity: 'error'
+      });
+      return;
+    }
+    if (parseFloat(formData.amount) <= 0) {
+      setAlert({
+        show: true,
+        message: 'Tutar sıfırdan büyük olmalı',
+        severity: 'error'
+      });
+      return;
+    }
     const transaction = {
-      description: formData.description,
+      description: formData.description.trim(),
       amount: parseFloat(formData.amount),
       date: new Date().toISOString()
     };
-
     if (formData.type === 'income') {
       addIncome(transaction);
     } else {
       addExpense(transaction);
     }
-
     setAlert({
       show: true,
       message: `${formData.type === 'income' ? 'Gelir' : 'Gider'} başarıyla eklendi`,
       severity: 'success'
     });
-
     setFormData({
       type: 'income',
       description: '',
       amount: ''
     });
-
     setTimeout(() => {
       setAlert(prev => ({ ...prev, show: false }));
     }, 3000);
@@ -111,10 +122,12 @@ const TransactionForm = () => {
 
         <TextField
           fullWidth
-          label="Açıklama"
+          label="Açıklama *"
           name="description"
           value={formData.description}
           onChange={handleChange}
+          placeholder="Örnek: Maaş, Kira, Market, Fatura..."
+          required
           sx={{ mb: 2 }}
         />
 

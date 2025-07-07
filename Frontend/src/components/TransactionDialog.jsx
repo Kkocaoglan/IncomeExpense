@@ -56,23 +56,40 @@ const TransactionDialog = ({ open, handleClose, type }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setTransaction(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setTransaction(prev => {
+      const newTransaction = { ...prev, [name]: value };
+      
+      // Eğer kategori seçildiyse ve description boşsa, kategori adını description olarak ata
+      if (name === 'category' && !prev.description) {
+        const selectedCategory = categories[type].find(cat => cat.value === value);
+        if (selectedCategory) {
+          newTransaction.description = selectedCategory.label;
+        }
+      }
+      
+      return newTransaction;
+    });
   };
 
   const handleSubmit = () => {
     if (!transaction.amount || !transaction.category || !transaction.date) {
       return;
     }
-
+    
+    // Description boşsa kategori adını kullan
+    let description = transaction.description.trim();
+    if (!description) {
+      const selectedCategory = categories[type].find(cat => cat.value === transaction.category);
+      description = selectedCategory ? selectedCategory.label : '';
+    }
+    
     const newTransaction = {
       ...transaction,
+      description: description,
       id: Date.now(),
       amount: parseFloat(transaction.amount)
     };
-
+    
     handleClose(newTransaction);
   };
 
@@ -106,11 +123,13 @@ const TransactionDialog = ({ open, handleClose, type }) => {
               <TextField
                 name="description"
                 autoFocus
-                label="Açıklama"
+                label="Açıklama *"
                 type="text"
                 fullWidth
                 value={transaction.description}
                 onChange={handleChange}
+                placeholder="Örnek: Maaş, Kira, Market, Fatura..."
+                required
               />
             </Grid>
           )}

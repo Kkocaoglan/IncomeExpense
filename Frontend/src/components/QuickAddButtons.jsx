@@ -9,11 +9,13 @@ const QuickAddButtons = () => {
   const [transactionType, setTransactionType] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [error, setError] = useState('');
 
   const handleOpenDialog = (type) => {
     setTransactionType(type);
     setDescription('');
     setAmount('');
+    setError('');
     setOpenDialog(true);
   };
 
@@ -22,20 +24,28 @@ const QuickAddButtons = () => {
   };
 
   const handleSubmit = () => {
-    if (!description || !amount) return;
-
+    if (!description.trim()) {
+      setError('Lütfen açıklama girin (ör: Maaş, Kira, Market)');
+      return;
+    }
+    if (!amount) {
+      setError('Lütfen tutar girin');
+      return;
+    }
+    if (parseFloat(amount) <= 0) {
+      setError('Tutar sıfırdan büyük olmalı');
+      return;
+    }
     const transaction = {
-      description,
+      description: description.trim(),
       amount: parseFloat(amount),
       date: new Date().toISOString()
     };
-
     if (transactionType === 'income') {
       addIncome(transaction);
     } else {
       addExpense(transaction);
     }
-
     handleCloseDialog();
   };
 
@@ -80,11 +90,13 @@ const QuickAddButtons = () => {
           <TextField
             autoFocus
             margin="dense"
-            label="Açıklama"
+            label="Açıklama *"
             type="text"
             fullWidth
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            placeholder="Örnek: Maaş, Kira, Market, Fatura..."
+            required
           />
           <TextField
             margin="dense"
@@ -97,6 +109,7 @@ const QuickAddButtons = () => {
               inputProps: { min: 0, step: "0.01" }
             }}
           />
+          {error && <p style={{ color: 'red' }}>{error}</p>}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>İptal</Button>

@@ -20,6 +20,7 @@ const AddTransaction = ({ type }) => {
     amount: '',
     date: new Date().toISOString().split('T')[0]
   });
+  const [error, setError] = useState('');
 
   const handleOpen = () => {
     setOpen(true);
@@ -43,22 +44,30 @@ const AddTransaction = ({ type }) => {
   };
 
   const handleSubmit = () => {
-    if (transaction.description.trim() === '' || !transaction.amount) {
+    let desc = transaction.description.trim();
+    if (!desc) {
+      setError('Lütfen açıklama girin (ör: Maaş, Kira, Market)');
       return;
     }
-    
+    if (!transaction.amount) {
+      setError('Lütfen tutar girin');
+      return;
+    }
+    if (parseFloat(transaction.amount) <= 0) {
+      setError('Tutar sıfırdan büyük olmalı');
+      return;
+    }
     const newTransaction = {
       ...transaction,
+      description: desc,
       id: Date.now(),
       amount: parseFloat(transaction.amount)
     };
-    
     if (type === 'income') {
       addIncome(newTransaction);
     } else {
       addExpense(newTransaction);
     }
-    
     handleClose();
   };
 
@@ -83,11 +92,13 @@ const AddTransaction = ({ type }) => {
               <TextField
                 autoFocus
                 name="description"
-                label="Açıklama"
+                label="Açıklama *"
                 fullWidth
                 variant="outlined"
                 value={transaction.description}
                 onChange={handleChange}
+                placeholder="Örnek: Maaş, Kira, Market, Fatura..."
+                required
               />
             </Grid>
             <Grid item xs={12}>
@@ -99,6 +110,7 @@ const AddTransaction = ({ type }) => {
                 variant="outlined"
                 value={transaction.amount}
                 onChange={handleChange}
+                min="0"
               />
             </Grid>
             <Grid item xs={12}>
@@ -115,6 +127,13 @@ const AddTransaction = ({ type }) => {
                 }}
               />
             </Grid>
+            {error && (
+              <Grid item xs={12}>
+                <Box sx={{ color: 'error.main', fontSize: '0.875rem' }}>
+                  {error}
+                </Box>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>

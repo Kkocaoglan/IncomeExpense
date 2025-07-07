@@ -16,7 +16,7 @@ const ExchangeRates = () => {
   });
 
   if (exchangeLoading || goldLoading) return <div>Yükleniyor...</div>;
-  if (exchangeError || goldError) return <div>Bir hata oluştu</div>;
+  if (exchangeError || goldError) return null;
 
   // Altın fiyatlarını gram cinsinden hesapla (1 troy ounce = 31.1034768 gram)
   const calculateGoldPricePerGram = (price) => {

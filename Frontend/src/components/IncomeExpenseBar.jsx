@@ -20,13 +20,9 @@ const IncomeExpenseBar = () => {
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
   const totalExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-  // Net gelir ve vergileri hesapla
-  const totalTaxIncome = incomes.reduce((sum, income) => sum + (income.tax || 0), 0);
-  const netIncome = totalIncome - totalTaxIncome;
-  
-  // Net gider ve vergileri hesapla
-  const totalTaxExpense = expenses.reduce((sum, expense) => sum + (expense.tax || 0), 0);
-  const netExpense = totalExpense - totalTaxExpense;
+  // Net gelir ve gider (vergi olmadan)
+  const netIncome = totalIncome;
+  const netExpense = totalExpense;
 
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -48,9 +44,6 @@ const IncomeExpenseBar = () => {
         <Typography variant="body2" color="success.main">
           Net: {formatCurrency(netIncome)}
         </Typography>
-        <Typography variant="body2" color="error.main">
-          Vergi: {formatCurrency(totalTaxIncome)}
-        </Typography>
         <Box 
           sx={{ 
             mt: 2,
@@ -62,22 +55,13 @@ const IncomeExpenseBar = () => {
           }}
         >
           {totalIncome > 0 && (
-            <>
-              <Box
-                sx={{
-                  width: `${(netIncome / totalIncome) * 100}%`,
-                  height: '100%',
-                  bgcolor: 'success.main'
-                }}
-              />
-              <Box
-                sx={{
-                  width: `${(totalTaxIncome / totalIncome) * 100}%`,
-                  height: '100%',
-                  bgcolor: 'error.main'
-                }}
-              />
-            </>
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                bgcolor: 'success.main'
+              }}
+            />
           )}
         </Box>
       </Paper>
@@ -100,9 +84,6 @@ const IncomeExpenseBar = () => {
         <Typography variant="body2" color="error.main">
           Ana Miktar: {formatCurrency(netExpense)}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Vergi: {formatCurrency(totalTaxExpense)}
-        </Typography>
         <Box 
           sx={{ 
             mt: 2,
@@ -114,22 +95,13 @@ const IncomeExpenseBar = () => {
           }}
         >
           {totalExpense > 0 && (
-            <>
-              <Box
-                sx={{
-                  width: `${(netExpense / totalExpense) * 100}%`,
-                  height: '100%',
-                  bgcolor: 'error.main'
-                }}
-              />
-              <Box
-                sx={{
-                  width: `${(totalTaxExpense / totalExpense) * 100}%`,
-                  height: '100%',
-                  bgcolor: 'grey.700'
-                }}
-              />
-            </>
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                bgcolor: 'error.main'
+              }}
+            />
           )}
         </Box>
       </Paper>

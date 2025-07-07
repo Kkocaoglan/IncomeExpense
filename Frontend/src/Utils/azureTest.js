@@ -18,7 +18,6 @@ export async function analyzeReceiptWithProxy(file) {
 
   // Toplam tutarı bul
   let toplam = 0;
-  let kdv = 0;
 
   // Farklı toplam formatlarını kontrol et
   const totalPatterns = [
@@ -43,19 +42,6 @@ export async function analyzeReceiptWithProxy(file) {
         }
       }
     }
-
-    // KDV tutarını bul
-    if (line.match(/KDV/i) || line.match(/VERGİ/i)) {
-      const kdvMatch = line.match(/(\d+[.,]\d+)/);
-      if (kdvMatch) {
-        kdv = parseFloat(kdvMatch[1].replace(',', '.'));
-      }
-    }
-  }
-
-  // Eğer KDV bulunamadıysa ve toplam varsa, toplamın %18'ini KDV olarak hesapla
-  if (kdv === 0 && toplam > 0) {
-    kdv = toplam * 0.18;
   }
 
   // Eğer backend'den gelen total değeri varsa ve bizim bulduğumuzdan farklıysa, backend'deki değeri kullan
@@ -64,16 +50,10 @@ export async function analyzeReceiptWithProxy(file) {
     toplam = result.total;
   }
 
-  // Eğer backend'den gelen items varsa ve KDV hesaplanamadıysa, items üzerinden hesapla
-  if (kdv === 0 && result.items && result.items.length > 0) {
-    kdv = result.items.reduce((sum, item) => sum + (item.price * 0.18), 0);
-  }
-
-  console.log('Hesaplanan değerler:', { toplam, kdv });
+  console.log('Hesaplanan değerler:', { toplam });
 
   return {
     toplam,
-    kdv,
     raw: result
   };
 }

@@ -50,6 +50,10 @@ export const FinanceProvider = ({ children }) => {
   }, []);
 
   const addIncome = (income) => {
+    if (parseFloat(income.amount) <= 0) {
+      alert('Gelir tutarı sıfırdan büyük olmalı!');
+      return;
+    }
     const newIncome = {
       ...income,
       id: income.id || Date.now(),
@@ -60,6 +64,10 @@ export const FinanceProvider = ({ children }) => {
   };
 
   const addExpense = (expense) => {
+    if (parseFloat(expense.amount) <= 0) {
+      alert('Gider tutarı sıfırdan büyük olmalı!');
+      return;
+    }
     const newExpense = {
       ...expense,
       id: expense.id || Date.now(),
