@@ -10,6 +10,7 @@ import InvestmentSection from '../components/InvestmentSection';
 import TransactionDialog from '../components/TransactionDialog';
 import DocumentScanDialog from '../components/DocumentScanDialog';
 import ExchangeRates from '../components/ExchangeRates';
+import Chatbot from '../components/Chatbot';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 
@@ -107,6 +108,11 @@ const Dashboard = () => {
         {/* Exchange Rates Section */}
         <Grid item xs={12}>
           <ExchangeRates />
+        </Grid>
+
+        {/* Chatbot Section */}
+        <Grid item xs={12}>
+          <Chatbot />
         </Grid>
 
         {/* Summary Cards */}

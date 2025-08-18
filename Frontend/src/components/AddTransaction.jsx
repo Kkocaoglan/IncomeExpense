@@ -37,9 +37,10 @@ const AddTransaction = ({ type }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const sanitizeAmount = (v) => parseFloat(String(v).replace(/[\.\s]/g, '').replace(',', '.')) || 0;
     setTransaction({
       ...transaction,
-      [name]: name === 'amount' ? parseFloat(value) || 0 : value
+      [name]: name === 'amount' ? sanitizeAmount(value) : value
     });
   };
 
@@ -110,6 +111,14 @@ const AddTransaction = ({ type }) => {
                 variant="outlined"
                 value={transaction.amount}
                 onChange={handleChange}
+                onKeyDown={(e) => { if (['-','+','e','E'].includes(e.key)) e.preventDefault(); }}
+                onPaste={(e) => {
+                  const text = (e.clipboardData || window.clipboardData).getData('text');
+                  const num = parseFloat(text.replace(/[\.\s]/g, '').replace(',', '.'));
+                  if (isNaN(num) || num < 0) {
+                    e.preventDefault();
+                  }
+                }}
                 min="0"
               />
             </Grid>

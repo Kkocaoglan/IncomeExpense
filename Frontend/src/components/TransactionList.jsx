@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Typography,
   List,
@@ -6,41 +6,15 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
-  Collapse,
   Box,
   useTheme,
   useMediaQuery,
-  Tooltip,
-  Fade
+  Tooltip
 } from '@mui/material';
-import { Delete, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Delete } from '@mui/icons-material';
 import { useContext } from 'react';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-
-const categoryColors = {
-  mutfak: '#FF6B6B',
-  kira: '#4ECDC4',
-  beklenmeyen: '#FFD93D',
-  giyim: '#95E1D3',
-  faturalar: '#FCE38A',
-  ulasim: '#EAFFD0',
-  saglik: '#F38181',
-  eglence: '#E0BBE4',
-  diger: '#957DAD'
-};
-
-const categoryLabels = {
-  mutfak: 'Mutfak',
-  kira: 'Kira',
-  beklenmeyen: 'Beklenmeyen',
-  giyim: 'Giyim',
-  faturalar: 'Faturalar',
-  ulasim: 'Ulaşım',
-  saglik: 'Sağlık',
-  eglence: 'Eğlence',
-  diger: 'Diğer'
-};
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('tr-TR', {
@@ -56,7 +30,6 @@ const TransactionList = ({ type }) => {
   const { darkMode } = useContext(ThemeContext);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [expandedCategories, setExpandedCategories] = useState({});
 
   const transactions = type === 'income' ? incomes : expenses;
 

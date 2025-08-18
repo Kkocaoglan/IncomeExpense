@@ -1,0 +1,18 @@
+{
+  "categories": [
+    { "key": "maas", "label": "Maaş", "synonyms": ["maas", "maaş", "salary"], "typeHint": "income" },
+    { "key": "ekgelir", "label": "Ek Gelir", "synonyms": ["ek gelir", "ekgelir", "bonus", "prim", "bahsis", "bahşiş"], "typeHint": "income" },
+    { "key": "yatirim", "label": "Yatırım", "synonyms": ["yatirim", "yatırım"], "typeHint": "income" },
+
+    { "key": "kira", "label": "Kira", "synonyms": ["kira"], "typeHint": "expense" },
+    { "key": "market", "label": "Market", "synonyms": ["market", "alisveris", "alışveriş", "bakkal"], "typeHint": "expense" },
+    { "key": "fatura", "label": "Fatura", "synonyms": ["fatura", "elektrik", "su", "dogalgaz", "doğalgaz", "internet"], "typeHint": "expense" },
+    { "key": "mutfak", "label": "Mutfak", "synonyms": ["mutfak"], "typeHint": "expense" },
+    { "key": "ulasim", "label": "Ulaşım", "synonyms": ["ulasim", "ulaşım", "otobus", "otobüs", "metro", "taksi"], "typeHint": "expense" },
+    { "key": "saglik", "label": "Sağlık", "synonyms": ["saglik", "sağlık", "eczane", "hastane"], "typeHint": "expense" },
+    { "key": "eglence", "label": "Eğlence", "synonyms": ["eglence", "eğlence", "sinema", "konser"], "typeHint": "expense" },
+    { "key": "giyim", "label": "Giyim", "synonyms": ["giyim", "kiyafet", "kıyafet"], "typeHint": "expense" },
+    { "key": "beklenmeyen", "label": "Beklenmeyen", "synonyms": ["beklenmeyen"], "typeHint": "expense" },
+    { "key": "diger", "label": "Diğer", "synonyms": ["diger", "diğer", "dig er"], "typeHint": "expense" }
+  ]
+} 

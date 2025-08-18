@@ -142,6 +142,14 @@ const TransactionDialog = ({ open, handleClose, type }) => {
               fullWidth
               value={transaction.amount}
               onChange={handleChange}
+              onKeyDown={(e) => { if (['-','+','e','E'].includes(e.key)) e.preventDefault(); }}
+              onPaste={(e) => {
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                const num = parseFloat(text.replace(/[\.\s]/g, '').replace(',', '.'));
+                if (isNaN(num) || num < 0) {
+                  e.preventDefault();
+                }
+              }}
               InputProps={{
                 inputProps: { min: 0, step: "0.01" },
                 endAdornment: <Typography>₺</Typography>
