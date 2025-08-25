@@ -74,8 +74,17 @@ PORT=5001
 # Tüm servisleri başlat
 docker-compose -f docker-compose.dev.yml up -d
 
+# Sadece DB'yi ayağa kaldır
+docker-compose -f docker-compose.dev.yml up -d postgres
+
+# Sağlık durumu
+docker-compose -f docker-compose.dev.yml ps
+
 # Logları takip et
 docker-compose -f docker-compose.dev.yml logs -f
+
+# psql ile bağlanma (host makineden)
+psql "postgresql://app:app@localhost:5432/income_expense?schema=public"
 ```
 
 ### 4. Geliştirme Modunda Çalıştırma

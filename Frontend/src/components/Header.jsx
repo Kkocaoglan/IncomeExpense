@@ -1,11 +1,27 @@
 import { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, IconButton, Box } from '@mui/material';
-import { Home, AccountCircle, Settings } from '@mui/icons-material';
+import { AppBar, Toolbar, Typography, IconButton, Box, Menu, MenuItem } from '@mui/material';
+import { Home, AccountCircle, Settings, ExitToApp } from '@mui/icons-material';
 import { ThemeContext } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Header = () => {
   const { darkMode } = useContext(ThemeContext);
+  const { user, logout } = useAuth();
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    handleMenuClose();
+    await logout();
+  };
 
   return (
     <AppBar position="static" color={darkMode ? 'default' : 'primary'}>
@@ -34,6 +50,35 @@ const Header = () => {
           >
             <Settings />
           </IconButton>
+          <IconButton
+            color="inherit"
+            aria-label="user menu"
+            onClick={handleMenuOpen}
+            sx={{ ml: 1 }}
+          >
+            <ExitToApp />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem disabled>
+              {user?.name || user?.email}
+            </MenuItem>
+            <MenuItem onClick={handleLogout}>
+              <ExitToApp sx={{ mr: 1 }} />
+              Çıkış Yap
+            </MenuItem>
+          </Menu>
         </Box>
       </Toolbar>
     </AppBar>

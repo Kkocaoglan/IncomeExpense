@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     build:
@@ -25,26 +23,33 @@ services:
       - "5001:5001"
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@database:5432/incomeexpenses
+      - DATABASE_URL=postgresql://app:app@postgres:5432/income_expense?schema=public
       - PORT=5001
     volumes:
       - ./Backend:/app
       - /app/node_modules
     depends_on:
-      - database
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
 
-  database:
-    image: postgres:14-alpine
+  postgres:
+    image: postgres:16
+    container_name: ie-postgres
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=incomeexpenses
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: income_expense
     ports:
-      - "5432:5432"
+      - "5432:5432"       # sadece lokal geliştirme için
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d income_expense"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - app-network
 
@@ -53,4 +58,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data: 
+  db-data: 

@@ -1,38 +1,53 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useMemo } from 'react';
 import { getGoldGramTRY } from '../services/exchangeService';
+import * as txApi from '../services/transactionsApi';
+import * as invApi from '../services/investmentsApi';
 
 export const FinanceContext = createContext();
 
 export const FinanceProvider = ({ children }) => {
-  const [incomes, setIncomes] = useState(() => {
-    const savedIncomes = localStorage.getItem('incomes');
-    return savedIncomes ? JSON.parse(savedIncomes) : [];
-  });
-
-  const [expenses, setExpenses] = useState(() => {
-    const savedExpenses = localStorage.getItem('expenses');
-    return savedExpenses ? JSON.parse(savedExpenses) : [];
-  });
-
-  const [investments, setInvestments] = useState(() => {
-    const savedInvestments = localStorage.getItem('investments');
-    return savedInvestments ? JSON.parse(savedInvestments) : [];
-  });
-
+  const [transactions, setTransactions] = useState([]);
+  const [investments, setInvestments] = useState([]);
   const [goldPrice, setGoldPrice] = useState(0);
+  const [loading, setLoading] = useState(true);
 
+  // Derived lists for backward compatibility with UI that expects incomes/expenses
+  const incomes = useMemo(
+    () => transactions.filter(t => t.type === 'income'),
+    [transactions]
+  );
+  const expenses = useMemo(
+    () => transactions.filter(t => t.type === 'expense'),
+    [transactions]
+  );
+
+  // Initial load from API
   useEffect(() => {
-    localStorage.setItem('incomes', JSON.stringify(incomes));
-  }, [incomes]);
+    (async () => {
+      try {
+        const [tx, inv] = await Promise.all([
+          txApi.listTransactions(),
+          invApi.listInvestments()
+        ]);
 
-  useEffect(() => {
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-  }, [expenses]);
+        const normalizedTx = tx.map(t => ({ ...t, amount: Number(t.amount) }));
+        setTransactions(normalizedTx);
 
-  useEffect(() => {
-    localStorage.setItem('investments', JSON.stringify(investments));
-  }, [investments]);
+        const normalizedInv = inv.map(i => ({
+          ...i,
+          amount: Number(i.amount),
+          unitPrice: Number(i.unitPrice)
+        }));
+        setInvestments(normalizedInv);
+      } catch (e) {
+        console.error('API load failed:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
+  // Gold price polling (kept as before)
   useEffect(() => {
     const fetchGoldPrice = async () => {
       try {
@@ -48,68 +63,84 @@ export const FinanceProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const addIncome = (income) => {
-    if (parseFloat(income.amount) <= 0) {
-      alert('Gelir tutarı sıfırdan büyük olmalı!');
+  // Transactions API
+  const addTransaction = async (data) => {
+    if (parseFloat(data.amount) <= 0) {
+      alert('Tutar sıfırdan büyük olmalı!');
       return;
     }
-    const newIncome = {
-      ...income,
-      id: income.id || Date.now(),
-      date: income.date || new Date().toISOString(),
-      amount: parseFloat(income.amount)
-    };
-    setIncomes(prevIncomes => [...prevIncomes, newIncome]);
+    const created = await txApi.createTransaction({
+      ...data,
+      date: data.date || new Date().toISOString(),
+    });
+    const normalized = { ...created, amount: Number(created.amount) };
+    setTransactions(prev => [normalized, ...prev]);
+    return normalized;
   };
 
-  const addExpense = (expense) => {
-    if (parseFloat(expense.amount) <= 0) {
-      alert('Gider tutarı sıfırdan büyük olmalı!');
-      return;
-    }
-    const newExpense = {
-      ...expense,
-      id: expense.id || Date.now(),
-      date: expense.date || new Date().toISOString(),
-      amount: parseFloat(expense.amount)
-    };
-    setExpenses(prevExpenses => [...prevExpenses, newExpense]);
+  const updateTransaction = async (id, patch) => {
+    const updated = await txApi.updateTransaction(id, patch);
+    const normalized = { ...updated, amount: Number(updated.amount) };
+    setTransactions(prev => prev.map(t => (t.id === id ? normalized : t)));
+    return normalized;
   };
 
-  const addInvestment = (newInvestment) => {
-    const investment = {
+  const removeTransaction = async (id) => {
+    await txApi.deleteTransaction(id);
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Backward-compat helpers used by some components
+  const addIncome = async (income) => addTransaction({ ...income, type: 'income' });
+  const addExpense = async (expense) => addTransaction({ ...expense, type: 'expense' });
+  const deleteIncome = async (id) => removeTransaction(id);
+  const deleteExpense = async (id) => removeTransaction(id);
+
+  // Investments API
+  const addInvestment = async (newInvestment) => {
+    const created = await invApi.createInvestment({
       ...newInvestment,
-      id: Date.now(),
-      date: newInvestment.date || new Date().toISOString()
+      date: newInvestment.date || new Date().toISOString(),
+    });
+    const normalized = {
+      ...created,
+      amount: Number(created.amount),
+      unitPrice: Number(created.unitPrice)
     };
-    setInvestments(prevInvestments => [...prevInvestments, investment]);
+    setInvestments(prev => [normalized, ...prev]);
+    return normalized;
   };
 
-  const deleteIncome = (id) => {
-    setIncomes(prevIncomes => prevIncomes.filter(item => item.id !== id));
+  const deleteInvestment = async (id) => {
+    await invApi.deleteInvestment(id);
+    setInvestments(prev => prev.filter(item => item.id !== id));
   };
 
-  const deleteExpense = (id) => {
-    setExpenses(prevExpenses => prevExpenses.filter(item => item.id !== id));
-  };
-
-  const deleteInvestment = (id) => {
-    setInvestments(prevInvestments => prevInvestments.filter(item => item.id !== id));
-  };
+  const value = useMemo(() => ({
+    loading,
+    // primary
+    transactions,
+    addTransaction,
+    updateTransaction,
+    removeTransaction,
+    // derived/compat
+    incomes,
+    expenses,
+    // investments
+    investments,
+    addInvestment,
+    deleteInvestment,
+    // misc
+    goldPrice,
+    // legacy helpers (still used by some components)
+    addIncome,
+    addExpense,
+    deleteIncome,
+    deleteExpense,
+  }), [loading, transactions, incomes, expenses, investments, goldPrice]);
 
   return (
-    <FinanceContext.Provider value={{
-      incomes,
-      expenses,
-      investments,
-      goldPrice,
-      addIncome,
-      addExpense,
-      addInvestment,
-      deleteIncome,
-      deleteExpense,
-      deleteInvestment
-    }}>
+    <FinanceContext.Provider value={value}>
       {children}
     </FinanceContext.Provider>
   );

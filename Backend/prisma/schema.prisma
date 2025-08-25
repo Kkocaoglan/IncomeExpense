@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  passwordHash String?
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  investments  Investment[]
+  receipts     Receipt[]
+  refreshTokens RefreshToken[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // 'income' | 'expense'
+  amount      Decimal  @db.Decimal(18,2)
+  currency    String   // 'TRY' | 'USD' | ...
+  category    String?
+  date        DateTime
+  merchant    String?
+  description String?
+  tags        String[] @db.Text
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, date])
+  @@index([type])
+  @@index([category])
+}
+
+model Investment {
+  id         String   @id @default(cuid())
+  userId     String
+  assetType  String   // 'gold' | 'usd' | 'eur' | ...
+  amount     Decimal  @db.Decimal(18,6)
+  unitPrice  Decimal  @db.Decimal(18,6)
+  currency   String
+  date       DateTime
+  notes      String?
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Receipt {
+  id         String   @id @default(cuid())
+  userId     String
+  fileRef    String
+  ocrJson    Json
+  total      Decimal? @db.Decimal(18,2)
+  tax        Decimal? @db.Decimal(18,2)
+  merchant   String?
+  date       DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, date])
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  jti        String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}

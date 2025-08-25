@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    open: true // Uygulama başladığında tarayıcıyı otomatik açar
+    open: true, // Uygulama başladığında tarayıcıyı otomatik açar
+    proxy: {
+      '/api': 'http://localhost:5001'
+    }
   }
 })
