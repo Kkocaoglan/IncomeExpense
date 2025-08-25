@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
-import { getGoldPrice } from '../services/exchangeService';
+import { getGoldGramTRY } from '../services/exchangeService';
 
 export const FinanceContext = createContext();
 
@@ -36,9 +36,8 @@ export const FinanceProvider = ({ children }) => {
   useEffect(() => {
     const fetchGoldPrice = async () => {
       try {
-        const data = await getGoldPrice();
-        const pricePerGram = data.rates.TRY / 31.1034768;
-        setGoldPrice(pricePerGram);
+        const gramTry = await getGoldGramTRY();
+        setGoldPrice(gramTry);
       } catch (error) {
         console.error('Error fetching gold price:', error);
       }

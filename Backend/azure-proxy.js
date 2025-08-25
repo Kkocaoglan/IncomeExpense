@@ -111,7 +111,19 @@ function extractReceiptData(content) {
   };
 }
 
+// Legacy route for backward compatibility
 app.post('/analyze', upload.single('file'), async (req, res) => {
+  // Redirect to new route
+  req.url = '/ocr/analyze';
+  return handleAnalyze(req, res);
+});
+
+// New API route structure
+app.post('/ocr/analyze', upload.single('file'), async (req, res) => {
+  return handleAnalyze(req, res);
+});
+
+async function handleAnalyze(req, res) {
   let filePath = null;
   
   try {
@@ -219,7 +231,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-});
+}
 
 // Test endpoint'i
 app.get('/test', (req, res) => {

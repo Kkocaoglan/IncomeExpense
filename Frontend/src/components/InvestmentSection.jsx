@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect, useMemo } from 'react';
 import { 
   Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent, 
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
@@ -7,83 +7,65 @@ import {
 import { Add, Delete } from '@mui/icons-material';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
+// Live price fetching removed
 
 const InvestmentSection = () => {
-  const { investments, goldPrice, addInvestment, deleteInvestment } = useContext(FinanceContext);
+  const { investments, addInvestment, deleteInvestment } = useContext(FinanceContext);
   const { darkMode } = useContext(ThemeContext);
   const [open, setOpen] = useState(false);
   const [newInvestment, setNewInvestment] = useState({
     type: 'Altın',
     amount: '',
-    date: new Date().toISOString().split('T')[0]  // Format as YYYY-MM-DD
+    date: new Date().toISOString().split('T')[0]
   });
 
-  // Define investment types
+  // Basit mod: canlı fiyat yok, sadece alış fiyatıyla değer hesaplanır
+  const [lastUpdated] = useState(null);
+
+  // Yatırım türleri
   const investmentTypes = [
     { value: 'Altın', label: 'Altın (gr)' },
     { value: 'Gümüş', label: 'Gümüş (gr)' },
     { value: 'Dolar', label: 'Dolar ($)' },
     { value: 'Euro', label: 'Euro (€)' },
+    { value: 'Sterlin', label: 'Sterlin (£)' }
   ];
 
-  // Mock prices for display purposes only
-  const mockPrices = {
-    'Altın': goldPrice, // 2500 TL/gr as defined in FinanceContext
-    'Gümüş': 40, // TL/gr
-    'Dolar': 35, // TL/$
-    'Euro': 38, // TL/€
-  };
+  // Canlı/dünkü fiyatlar kaldırıldı
 
-  const handleOpen = () => {
-    setOpen(true);
-  };
-
+  const handleOpen = () => { setOpen(true); };
   const handleClose = () => {
     setOpen(false);
-    // Reset form
-    setNewInvestment({
-      type: 'Altın',
-      amount: '',
-      date: new Date().toISOString().split('T')[0]
-    });
+    setNewInvestment({ type: 'Altın', amount: '', date: new Date().toISOString().split('T')[0] });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setNewInvestment({
       ...newInvestment,
-      [name]: name === 'amount' ? (parseFloat(value) || '') : value
+      [name]: name === 'amount' ? (parseFloat(String(value).replace(/[\.\s]/g, '').replace(',', '.')) || '') : value
     });
   };
 
-  const handleSubmit = () => {
-    if (!newInvestment.amount) {
-      return; // Basic validation
-    }
-    
+  const handleSubmit = async () => {
+    if (!newInvestment.amount) return;
+    // Basit mod: kullanıcıdan alış fiyatı girilecek
+    const pricePerUnit = parseFloat(prompt('Alış fiyatı (TRY) birim başına:') || '0');
     const investment = {
       ...newInvestment,
       id: Date.now(),
-      price: mockPrices[newInvestment.type], // Current price at time of investment
+      price: pricePerUnit || 0,
       amount: parseFloat(newInvestment.amount)
     };
-    
     addInvestment(investment);
     handleClose();
   };
 
-  // Format date function
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('tr-TR').format(date);
-  };
+  const formatTRY = (n) => (n || 0).toLocaleString('tr-TR') + ' ₺';
+  const formatDate = (dateString) => new Intl.DateTimeFormat('tr-TR').format(new Date(dateString));
+  const currentValue = (investment) => investment.amount * (investment.price || 0);
+  // Günlük getiri kaldırıldı
 
-  // Calculate current value
-  const calculateCurrentValue = (investment) => {
-    return investment.amount * mockPrices[investment.type];
-  };
-
-  // Styling for dark mode compatibility
   const paperStyle = {
     p: 2, 
     mb: 2,
@@ -94,53 +76,49 @@ const InvestmentSection = () => {
   return (
     <>
       <Paper elevation={3} sx={paperStyle}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="h6">Yatırımlarım</Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<Add />}
-            onClick={handleOpen}
-          >
-            Yeni Yatırım
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {lastUpdated && (
+              <Typography variant="body2" color="text.secondary">
+                Güncellendi: {lastUpdated.toLocaleTimeString('tr-TR')}
+              </Typography>
+            )}
+            <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleOpen}>
+              Yeni Yatırım
+            </Button>
+          </Box>
         </Box>
+        {/* Günlük getiri kaldırıldı (canlı fiyat yok) */}
 
         <Divider sx={{ mb: 2 }} />
 
         {investments.length === 0 ? (
-          <Typography variant="body1" align="center">
-            Henüz yatırım kaydı yok
-          </Typography>
+          <Typography variant="body1" align="center">Henüz yatırım kaydı yok</Typography>
         ) : (
           <List>
-            {investments.map((investment) => (
-              <ListItem key={investment.id} divider>
+            {investments.map((inv) => (
+              <ListItem key={inv.id} divider>
                 <ListItemText
-                  primary={`${investment.type}: ${investment.amount} ${investment.type === 'Altın' || investment.type === 'Gümüş' ? 'gr' : investment.type === 'Dolar' ? '$' : '€'}`}
+                  primary={`${inv.type}: ${inv.amount} ${inv.type === 'Altın' || inv.type === 'Gümüş' ? 'gr' : inv.type === 'Dolar' ? '$' : inv.type === 'Euro' ? '€' : '£'}`}
                   secondary={
                     <>
                       <Typography component="span" variant="body2" color="text.secondary">
-                        Alış Değeri: {(investment.amount * investment.price).toLocaleString('tr-TR')} ₺
+                        Alış Değeri: {formatTRY(inv.amount * (inv.price || 0))}
                       </Typography>
                       {' - '}
-                      <Typography component="span" variant="body2" color={calculateCurrentValue(investment) > (investment.amount * investment.price) ? 'success.main' : 'error.main'}>
-                        Güncel Değer: {calculateCurrentValue(investment).toLocaleString('tr-TR')} ₺
+                      <Typography component="span" variant="body2" color={currentValue(inv) >= (inv.amount * (inv.price || 0)) ? 'success.main' : 'error.main'}>
+                        Güncel Değer: {formatTRY(currentValue(inv))}
                       </Typography>
-                      {' - '}
+                      {/* Günlük getiri kaldırıldı */}
                       <Typography component="span" variant="body2" color="text.secondary">
-                        {formatDate(investment.date)}
+                        {formatDate(inv.date)}
                       </Typography>
                     </>
                   }
                 />
                 <ListItemSecondaryAction>
-                  <IconButton 
-                    edge="end" 
-                    aria-label="delete"
-                    onClick={() => deleteInvestment(investment.id)}
-                    color="error"
-                  >
+                  <IconButton edge="end" aria-label="delete" onClick={() => deleteInvestment(inv.id)} color="error">
                     <Delete />
                   </IconButton>
                 </ListItemSecondaryAction>
@@ -164,10 +142,8 @@ const InvestmentSection = () => {
                   label="Yatırım Türü"
                   onChange={handleChange}
                 >
-                  {investmentTypes.map((type) => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label} - Güncel Fiyat: {mockPrices[type.value].toLocaleString('tr-TR')} ₺
-                    </MenuItem>
+                  {investmentTypes.map((t) => (
+                    <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -175,12 +151,18 @@ const InvestmentSection = () => {
             <Grid item xs={12}>
               <TextField
                 name="amount"
-                label={`Miktar ${newInvestment.type === 'Altın' || newInvestment.type === 'Gümüş' ? '(gr)' : newInvestment.type === 'Dolar' ? '($)' : '(€)'}`}
+                label={`Miktar ${newInvestment.type === 'Altın' || newInvestment.type === 'Gümüş' ? '(gr)' : newInvestment.type === 'Dolar' ? '($)' : newInvestment.type === 'Euro' ? '(€)' : '(£)'}`}
                 type="number"
                 fullWidth
                 variant="outlined"
                 value={newInvestment.amount}
                 onChange={handleChange}
+                onKeyDown={(e) => { if (['-','+','e','E'].includes(e.key)) e.preventDefault(); }}
+                onPaste={(e) => {
+                  const text = (e.clipboardData || window.clipboardData).getData('text');
+                  const num = parseFloat(text.replace(/[\.\s]/g, '').replace(',', '.'));
+                  if (isNaN(num) || num < 0) e.preventDefault();
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -192,28 +174,15 @@ const InvestmentSection = () => {
                 variant="outlined"
                 value={newInvestment.date}
                 onChange={handleChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            {newInvestment.amount && (
-              <Grid item xs={12}>
-                <Typography variant="body1">
-                  Toplam Değer: {(parseFloat(newInvestment.amount) * mockPrices[newInvestment.type]).toLocaleString('tr-TR')} ₺
-                </Typography>
-              </Grid>
-            )}
+            {/* Anlık değer önizlemesi kaldırıldı */}
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>İptal</Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained"
-            color="primary"
-            disabled={!newInvestment.amount}
-          >
+          <Button onClick={handleSubmit} variant="contained" color="primary" disabled={!newInvestment.amount}>
             Ekle
           </Button>
         </DialogActions>
