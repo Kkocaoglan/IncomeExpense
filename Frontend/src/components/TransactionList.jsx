@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   List,
@@ -13,8 +13,8 @@ import {
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useContext } from 'react';
-import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
+import { listTransactions } from '../services/transactionsApi';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('tr-TR', {
@@ -26,12 +26,27 @@ const formatCurrency = (amount) => {
 };
 
 const TransactionList = ({ type }) => {
-  const { expenses, incomes, deleteExpense, deleteIncome } = useContext(FinanceContext);
   const { darkMode } = useContext(ThemeContext);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [sort, setSort] = useState('date:desc');
 
-  const transactions = type === 'income' ? incomes : expenses;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { rows: r, total: t } = await listTransactions({ page, limit, sort, type });
+      if (!alive) return;
+      setRows(Array.isArray(r) ? r : []);
+      setTotal(Number(t) || 0);
+    })();
+    return () => { alive = false; };
+  }, [page, limit, sort, type]);
+
+  const totalPages = Math.max(1, Math.ceil((total || 0) / limit));
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('tr-TR');
@@ -39,7 +54,7 @@ const TransactionList = ({ type }) => {
 
   return (
     <List>
-      {transactions.map((transaction) => (
+      {rows.map((transaction) => (
         <ListItem
           key={transaction.id}
           sx={{
@@ -69,29 +84,25 @@ const TransactionList = ({ type }) => {
               </Box>
             }
           />
-          <ListItemSecondaryAction>
-            <Tooltip title="Sil" arrow>
-              <IconButton
-                edge="end"
-                aria-label="delete"
-                onClick={() => type === 'income' ? deleteIncome(transaction.id) : deleteExpense(transaction.id)}
-                color="error"
-                size={isMobile ? "small" : "medium"}
-                sx={{
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                    bgcolor: 'error.light'
-                  }
-                }}
-              >
-                <Delete />
-              </IconButton>
-            </Tooltip>
-          </ListItemSecondaryAction>
         </ListItem>
       ))}
     </List>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+      <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Önceki</button>
+      <Typography variant="caption">Sayfa {page} / {totalPages}</Typography>
+      <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Sonraki</button>
+      <select value={limit} onChange={e=>{ setPage(1); setLimit(parseInt(e.target.value,10)); }}>
+        <option value={10}>10</option>
+        <option value={20}>20</option>
+        <option value={50}>50</option>
+      </select>
+      <select value={sort} onChange={e=>{ setPage(1); setSort(e.target.value); }}>
+        <option value="date:desc">Tarih ↓</option>
+        <option value="date:asc">Tarih ↑</option>
+        <option value="amount:desc">Tutar ↓</option>
+        <option value="amount:asc">Tutar ↑</option>
+      </select>
+    </Box>
   );
 };
 

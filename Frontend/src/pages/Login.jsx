@@ -1,17 +1,25 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import apiClient from '../services/apiClient';
 import styles from './Auth.module.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('demo@example.com');
-  const [password, setPassword] = useState('P@ssw0rd!');
+  const { login, setApiAccessToken, setAccessTokenState, setUser } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // 2FA state
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [tmpToken, setTmpToken] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [isVerifyingMFA, setIsVerifyingMFA] = useState(false);
+  const [mfaError, setMfaError] = useState('');
 
   const canSubmit = email.trim() && password.length >= 6 && !submitting;
 
@@ -21,15 +29,74 @@ export default function Login() {
     setSubmitting(true);
     setError('');
     try {
-      await login(email.trim(), password, remember);
+      const response = await apiClient.post('/auth/login', {
+        email: email.trim(),
+        password,
+        remember
+      });
+      
+             console.log('🔍 Login response:', response);
+       
+       // 2FA kontrolü
+       if (response.mfa_required) {
+         setTmpToken(response.tmpToken);
+         setShow2FAModal(true);
+         setSubmitting(false);
+         return;
+       }
+       
+       // Normal login - Response'dan gelen verileri kullan
+       const { accessToken, user } = response;
+       
+       // AuthContext'i güncelle - Zaten destructure edilmiş
+       setApiAccessToken(accessToken);
+       setAccessTokenState(accessToken);
+       setUser(user);
+      
+      // Remember seçeneği için localStorage
+      if (remember) {
+        localStorage.setItem('auth_remember', 'true');
+      } else {
+        localStorage.removeItem('auth_remember');
+      }
+      
       navigate('/', { replace: true });
     } catch (err) {
-      // apiClient generic hata atıyor; kullanıcı dostu mesaj göster
+      console.log('❌ Login error:', err);
       setError('E-posta veya şifre hatalı. Tekrar deneyin.');
     } finally {
       setSubmitting(false);
     }
   }
+
+  const handleMFAVerification = async () => {
+    if (!mfaCode.trim() || mfaCode.length !== 6) {
+      setMfaError('Lütfen 6 haneli kodu girin');
+      return;
+    }
+
+    setIsVerifyingMFA(true);
+    setMfaError('');
+
+    try {
+      const response = await apiClient.post('/auth/mfa/verify', {
+        tmpToken,
+        code: mfaCode
+      });
+
+      // MFA başarılı, normal login işlemini tamamla
+      await login(email.trim(), password, remember);
+      navigate('/', { replace: true });
+    } catch (error) {
+      if (error.response?.data?.error === 'invalid_code') {
+        setMfaError('Kod geçersiz');
+      } else {
+        setMfaError('Doğrulama sırasında bir hata oluştu');
+      }
+    } finally {
+      setIsVerifyingMFA(false);
+    }
+  };
 
   return (
     <div className={styles.shell}>
@@ -105,6 +172,57 @@ export default function Login() {
           <Link to="/register" className={styles.linkBtn}>Kayıt ol</Link>
         </footer>
       </div>
+
+      {/* 2FA Modal */}
+      {show2FAModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2>İki Faktörlü Doğrulama</h2>
+              <button 
+                onClick={() => setShow2FAModal(false)}
+                className={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <p className={styles.modalText}>
+                Güvenlik için iki faktörlü doğrulama gerekiyor.
+                Authenticator uygulamanızdaki 6 haneli kodu girin.
+              </p>
+
+              <div className={styles.codeInput}>
+                <label htmlFor="mfaCode">Doğrulama Kodu</label>
+                <input
+                  id="mfaCode"
+                  type="text"
+                  maxLength={6}
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className={styles.input}
+                />
+              </div>
+
+              <button
+                onClick={handleMFAVerification}
+                disabled={isVerifyingMFA || mfaCode.length !== 6}
+                className={styles.submit}
+              >
+                {isVerifyingMFA ? 'Doğrulanıyor...' : 'Doğrula'}
+              </button>
+
+              {mfaError && (
+                <p className={`${styles.message} ${styles.error}`}>
+                  {mfaError}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

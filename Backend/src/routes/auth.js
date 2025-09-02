@@ -2,7 +2,9 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const prisma = require('../lib/prisma');
-const { signAccess, signRefresh, verifyRefresh, verifyAccess } = require('../lib/jwt');
+const { signAccess, signRefresh, verifyRefresh, verifyAccess, signTmp } = require('../lib/jwt');
+const { bruteGuard, onLoginFail, onLoginSuccess } = require('../middlewares/bruteGuard');
+const { z } = require('zod');
 
 const router = express.Router();
 
@@ -18,10 +20,18 @@ function setRefreshCookie(res, token) {
 }
 
 // POST /api/auth/register
+const RegisterSchema = z.object({
+	email: z.string().email(),
+	password: z.string().min(8),
+	name: z.string().trim().min(1).optional(),
+});
+
 router.post('/register', async (req, res, next) => {
 	try {
-		const { email, password, name } = req.body || {};
-		if (!email || !password) return res.status(400).json({ error: 'email_password_required' });
+		console.log('📝 REGISTER REQUEST:', req.body);
+		const parsed = RegisterSchema.safeParse(req.body);
+		if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.issues });
+		const { email, password, name } = parsed.data;
 
 		const existing = await prisma.user.findUnique({ where: { email } });
 		if (existing) return res.status(409).json({ error: 'email_exists' });
@@ -32,30 +42,60 @@ router.post('/register', async (req, res, next) => {
 			select: { id: true, email: true, name: true }
 		});
 
+		console.log('✅ USER CREATED:', user);
 		res.status(201).json(user);
-	} catch (e) { next(e); }
+	} catch (e) { 
+		console.log('❌ REGISTER ERROR:', e);
+		next(e); 
+	}
+});
+
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  remember: z.boolean().optional(),
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res, next) => {
+router.post('/login', bruteGuard(), async (req, res, next) => {
 	try {
-		const { email, password } = req.body || {};
+		console.log('📝 LOGIN REQUEST:', req.body);
+		const parsed = LoginSchema.safeParse(req.body);
+		if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.issues });
+		const { email, password, remember = true } = parsed.data;
 		const user = await prisma.user.findUnique({ where: { email } });
-		if (!user || !user.passwordHash) return res.status(401).json({ error: 'invalid_credentials' });
+		if (!user || !user.passwordHash) {
+			console.log('❌ LOGIN FAILED: User not found or no password hash');
+			onLoginFail(req);
+			return res.status(401).json({ error: 'invalid_credentials' });
+		}
 
 		const ok = await bcrypt.compare(password, user.passwordHash);
-		if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+		if (!ok) {
+			console.log('❌ LOGIN FAILED: Password mismatch');
+			onLoginFail(req);
+			return res.status(401).json({ error: 'invalid_credentials' });
+		}
 
+		onLoginSuccess(req);
+
+		// Eğer 2FA açıksa access/refresh vermek yerine mfa_required dön
+		if (user.twoFAEnabled && user.totpSecret) {
+			const tmpToken = signTmp({ sub: user.id, email: user.email });
+			return res.json({ mfa_required: true, tmpToken });
+		}
+
+		// 2FA kapalıysa normal akış (access + refresh cookie)
 		const accessToken = signAccess({ sub: user.id, email: user.email });
 		const jti = uuidv4();
-		const refreshToken = signRefresh({ sub: user.id, jti });
-
+		const refreshToken = signRefresh({ sub: user.id, jti, remember });
 		const exp = new Date(Date.now() + 7*24*60*60*1000);
 		await prisma.refreshToken.create({
 			data: { userId: user.id, token: refreshToken, jti, expiresAt: exp }
 		});
 
 		setRefreshCookie(res, refreshToken);
+		console.log('✅ LOGIN SUCCESS:', { id: user.id, email: user.email, name: user.name });
 		res.json({ accessToken, user: { id: user.id, email: user.email, name: user.name } });
 	} catch (e) { next(e); }
 });

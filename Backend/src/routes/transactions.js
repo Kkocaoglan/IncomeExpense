@@ -2,7 +2,54 @@ const express = require('express');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { authRequired } = require('../middlewares/auth');
+const { parsePaging, parseSort } = require('../lib/paging');
 
+/**
+ * @openapi
+ * /transactions:
+ *   get:
+ *     summary: List my transactions
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100 }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, example: "date:desc" }
+ *     responses:
+ *       200:
+ *         description: Paginated list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rows:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Transaction'
+ *                 total:
+ *                   type: integer
+ * components:
+ *   schemas:
+ *     Transaction:
+ *       type: object
+ *       properties:
+ *         id: { type: string }
+ *         type: { type: string, enum: [income, expense] }
+ *         amount: { type: number }
+ *         currency: { type: string, example: "TRY" }
+ *         category: { type: string, nullable: true }
+ *         date: { type: string, format: date-time }
+ *         merchant: { type: string, nullable: true }
+ *         description: { type: string, nullable: true }
+ *         tags:
+ *           type: array
+ *           items: { type: string }
+ */
 const router = express.Router();
 
 const TransactionCreateSchema = z.object({
@@ -21,6 +68,8 @@ const TransactionPatchSchema = TransactionCreateSchema.partial();
 router.get('/', authRequired, async (req, res, next) => {
   try {
     const { from, to, type, category } = req.query;
+    const { skip, take } = parsePaging(req);
+    const orderBy = parseSort(req, { date: 'desc' });
     const where = { userId: req.user.id };
     if (type) where.type = String(type);
     if (category) where.category = String(category);
@@ -28,11 +77,11 @@ router.get('/', authRequired, async (req, res, next) => {
     if (from) where.date.gte = new Date(from);
     if (to) where.date.lte = new Date(to);
 
-    const list = await prisma.transaction.findMany({
-      where,
-      orderBy: { date: 'desc' },
-    });
-    res.json(list);
+    const [rows, total] = await Promise.all([
+      prisma.transaction.findMany({ where, orderBy, skip, take }),
+      prisma.transaction.count({ where })
+    ]);
+    res.json({ rows, total });
   } catch (e) { next(e); }
 });
 

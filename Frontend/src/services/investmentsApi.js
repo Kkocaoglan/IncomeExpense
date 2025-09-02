@@ -1,12 +1,12 @@
 import apiClient from './apiClient';
 
-const UID = import.meta.env.VITE_DEMO_USER_ID;
-
-export const listInvestments = () =>
-  apiClient.get(`/investments?userId=${UID}`);
+export const listInvestments = (filters = {}) => {
+  const qs = new URLSearchParams(filters);
+  return apiClient.get(`/investments?${qs.toString()}`);
+};
 
 export const createInvestment = (data) =>
-  apiClient.post('/investments', { userId: UID, ...data });
+  apiClient.post('/investments', data);
 
 export const updateInvestment = (id, data) =>
   apiClient.put(`/investments/${id}`, data);

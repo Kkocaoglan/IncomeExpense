@@ -5,10 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
-    open: true, // Uygulama başladığında tarayıcıyı otomatik açar
-    proxy: {
-      '/api': 'http://localhost:5001'
-    }
+    port: 5173,
+    open: true // Uygulama başladığında tarayıcıyı otomatik açar
+    // proxy kaldırıldı - direkt backend URL kullanacağız
   }
 })

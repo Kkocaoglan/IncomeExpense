@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const { authRequired } = require('../middlewares/auth');
+const { parsePaging, parseSort } = require('../lib/paging');
 const { z } = require('zod');
 
 const router = express.Router();
@@ -17,11 +18,15 @@ const CreateSchema = z.object({
 // GET /api/receipts
 router.get('/', authRequired, async (req, res, next) => {
   try {
-    const list = await prisma.receipt.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(list);
+    const { skip, take } = parsePaging(req);
+    const orderBy = parseSort(req, { createdAt: 'desc' });
+    const where = { userId: req.user.id };
+
+    const [rows, total] = await Promise.all([
+      prisma.receipt.findMany({ where, orderBy, skip, take }),
+      prisma.receipt.count({ where })
+    ]);
+    res.json({ rows, total });
   } catch (e) { next(e); }
 });
 

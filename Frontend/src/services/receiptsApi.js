@@ -1,9 +1,9 @@
 import apiClient from './apiClient';
 
-const UID = import.meta.env.VITE_DEMO_USER_ID;
-
-export const listReceipts = () =>
-  apiClient.get(`/receipts?userId=${UID}`);
+export const listReceipts = (filters = {}) => {
+  const qs = new URLSearchParams(filters);
+  return apiClient.get(`/receipts?${qs.toString()}`);
+};
 
 export const createReceipt = (payload) =>
-  apiClient.post('/receipts', { userId: UID, ...payload });
+  apiClient.post('/receipts', payload);

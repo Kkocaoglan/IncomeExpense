@@ -18,11 +18,16 @@ model User {
   email        String        @unique
   name         String?
   passwordHash String?
+  emailVerifiedAt DateTime?
+  twoFAEnabled Boolean       @default(false)
+  totpSecret   String?       // base32 secret (opsiyon: şifrele)
   createdAt    DateTime      @default(now())
   transactions Transaction[]
   investments  Investment[]
   receipts     Receipt[]
   refreshTokens RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  twoFABackups TwoFABackup[]
 }
 
 model Transaction {
@@ -40,8 +45,8 @@ model Transaction {
   user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId, date])
-  @@index([type])
-  @@index([category])
+  @@index([userId, type])
+  @@index([userId, category])
 }
 
 model Investment {
@@ -54,6 +59,7 @@ model Investment {
   date       DateTime
   notes      String?
   user       User     @relation(fields: [userId], references: [id])
+  @@index([userId, date])
 }
 
 model Receipt {
@@ -68,7 +74,7 @@ model Receipt {
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
 
-  @@index([userId, date])
+  @@index([userId, createdAt])
 }
 
 model RefreshToken {
@@ -81,5 +87,26 @@ model RefreshToken {
   revokedAt  DateTime?
   user       User     @relation(fields: [userId], references: [id])
 
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}
+
+model TwoFABackup {
+  id        String   @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
   @@index([userId])
 }

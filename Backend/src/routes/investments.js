@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const { authRequired } = require('../middlewares/auth');
+const { parsePaging, parseSort } = require('../lib/paging');
 const { z } = require('zod');
 
 const router = express.Router();
@@ -18,11 +19,15 @@ const PatchSchema = CreateSchema.partial();
 // GET /api/investments
 router.get('/', authRequired, async (req, res, next) => {
   try {
-    const list = await prisma.investment.findMany({
-      where: { userId: req.user.id },
-      orderBy: { date: 'desc' },
-    });
-    res.json(list);
+    const { skip, take } = parsePaging(req);
+    const orderBy = parseSort(req, { date: 'desc' });
+    const where = { userId: req.user.id };
+
+    const [rows, total] = await Promise.all([
+      prisma.investment.findMany({ where, orderBy, skip, take }),
+      prisma.investment.count({ where })
+    ]);
+    res.json({ rows, total });
   } catch (e) { next(e); }
 });
 

@@ -4,8 +4,12 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Security2FA from './pages/Security2FA';
+import TwoFactorAuth from './pages/TwoFactorAuth';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import EmailVerificationPending from './pages/EmailVerificationPending';
 import PrivateRoute from './components/PrivateRoute';
 import { FinanceProvider } from './contexts/FinanceContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -20,6 +24,8 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/email-verification-pending" element={<EmailVerificationPending />} />
             
             {/* Protected routes */}
             <Route path="/*" element={
@@ -30,6 +36,8 @@ function App() {
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/settings" element={<Settings />} />
+                      <Route path="/settings/security-2fa" element={<Security2FA />} />
+                      <Route path="/2fa" element={<TwoFactorAuth />} />
                     </Routes>
                   </Layout>
                 </FinanceProvider>

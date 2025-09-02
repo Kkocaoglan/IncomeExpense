@@ -1,4 +1,5 @@
 import { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Container, 
   Typography, 
@@ -21,6 +22,7 @@ import {
 import { ThemeContext } from '../contexts/ThemeContext';
 
 const Settings = () => {
+  const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [currency, setCurrency] = useState('TRY');
   const [dateFormat, setDateFormat] = useState('DD.MM.YYYY');
@@ -109,6 +111,18 @@ const Settings = () => {
                   <MenuItem value="YYYY-MM-DD">YYYY-MM-DD</MenuItem>
                 </Select>
               </FormControl>
+            </ListItemSecondaryAction>
+          </ListItem>
+          <Divider />
+          <ListItem button onClick={() => navigate('/2fa')}>
+            <ListItemText 
+              primary="İki Faktörlü Doğrulama" 
+              secondary="Hesap güvenliğinizi artırın" 
+            />
+            <ListItemSecondaryAction>
+              <Button variant="outlined" size="small">
+                Yönet
+              </Button>
             </ListItemSecondaryAction>
           </ListItem>
         </List>

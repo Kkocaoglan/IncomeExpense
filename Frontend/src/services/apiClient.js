@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 // Auth token management
 let currentAccessToken = null;
@@ -17,7 +17,7 @@ async function refreshAccessToken() {
     return refreshPromise;
   }
 
-  refreshPromise = fetch('/api/auth/refresh', {
+  refreshPromise = fetch('http://localhost:5001/api/auth/refresh', {
     method: 'POST',
     credentials: 'include'
   }).then(async (response) => {
