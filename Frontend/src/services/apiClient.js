@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = (typeof window !== 'undefined' && window?.import?.meta?.env?.VITE_API_URL)
+  ? window.import.meta.env.VITE_API_URL
+  : (typeof window !== 'undefined' && window.location && window.location.port === '5173')
+    ? 'http://localhost:5001/api'
+    : (import.meta?.env?.VITE_API_URL || '/api');
 
 // Auth token management
 let currentAccessToken = null;
@@ -17,7 +21,7 @@ async function refreshAccessToken() {
     return refreshPromise;
   }
 
-  refreshPromise = fetch('http://localhost:5001/api/auth/refresh', {
+  refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
     credentials: 'include'
   }).then(async (response) => {
@@ -59,6 +63,15 @@ class ApiClient {
       headers.Authorization = `Bearer ${currentAccessToken}`;
     }
 
+    // Generate Idempotency-Key for write requests if not provided
+    const method = String(options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      if (!headers['Idempotency-Key']) {
+        const fallback = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        headers['Idempotency-Key'] = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : fallback;
+      }
+    }
+
     const config = {
       headers,
       credentials: 'include', // Always include cookies for refresh token
@@ -79,7 +92,16 @@ class ApiClient {
       }
       
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        let errorBody = null;
+        const ct = response.headers.get('content-type') || '';
+        try {
+          if (ct.includes('application/json')) errorBody = await response.json();
+          else errorBody = await response.text();
+        } catch {}
+        const err = new Error(`API Error: ${response.status} ${response.statusText}`);
+        err.status = response.status;
+        err.response = errorBody;
+        throw err;
       }
 
       // Handle different response types
@@ -125,7 +147,16 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        let errorBody = null;
+        const ct = response.headers.get('content-type') || '';
+        try {
+          if (ct.includes('application/json')) errorBody = await response.json();
+          else errorBody = await response.text();
+        } catch {}
+        const err = new Error(`API Error: ${response.status} ${response.statusText}`);
+        err.status = response.status;
+        err.response = errorBody;
+        throw err;
       }
 
       const contentType = response.headers.get('content-type');

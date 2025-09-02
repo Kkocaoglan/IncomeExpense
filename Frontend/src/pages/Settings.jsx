@@ -17,13 +17,16 @@ import {
   MenuItem,
   Button,
   Snackbar,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import { ThemeContext } from '../contexts/ThemeContext';
+import { AuthContext } from '../contexts/AuthContext';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { user } = useContext(AuthContext);
   const [currency, setCurrency] = useState('TRY');
   const [dateFormat, setDateFormat] = useState('DD.MM.YYYY');
   const [notification, setNotification] = useState({
@@ -125,6 +128,80 @@ const Settings = () => {
               </Button>
             </ListItemSecondaryAction>
           </ListItem>
+          <Divider />
+          <ListItem sx={{ cursor: 'default' }}>
+            <ListItemText 
+              primary="Cihazlar & Oturumlar" 
+              secondary="Aktif oturumlarınızı yönetin ve güvenliği artırın" 
+            />
+            <ListItemSecondaryAction>
+              <Button 
+                variant="outlined" 
+                size="small"
+                onClick={() => navigate('/settings/sessions')}
+              >
+                Yönet
+              </Button>
+            </ListItemSecondaryAction>
+          </ListItem>
+          
+          {/* 🛡️ ADMIN-ONLY SECTION */}
+          {user?.role === 'ADMIN' && (
+            <>
+              <Divider />
+              <ListItem 
+                sx={{ 
+                  cursor: 'default',
+                  bgcolor: darkMode ? 'rgba(255,152,0,0.1)' : 'rgba(255,152,0,0.05)',
+                  border: '1px solid rgba(255,152,0,0.3)',
+                  borderRadius: 1,
+                  my: 1
+                }}
+              >
+                <ListItemText 
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      🛡️ Admin Panel
+                      <Chip 
+                        label="RESTRICTED" 
+                        size="small" 
+                        color="warning" 
+                        variant="outlined"
+                      />
+                    </Box>
+                  }
+                  secondary="Sistem yönetimi ve kullanıcı kontrolü - Tüm aktiviteler loglanır" 
+                />
+                <ListItemSecondaryAction>
+                  <Button 
+                    variant="contained" 
+                    color="warning"
+                    size="small"
+                    onClick={() => {
+                      // Extra confirmation for admin access
+                      if (window.confirm('Admin paneline erişmek istediğinizden emin misiniz? Bu aktivite loglanacaktır.')) {
+                        console.warn('🛡️ Admin panel access from settings', {
+                          userId: user.id,
+                          email: user.email,
+                          timestamp: new Date().toISOString()
+                        });
+                        navigate('/admin/dashboard');
+                      }
+                    }}
+                    sx={{ 
+                      fontWeight: 'bold',
+                      '&:hover': {
+                        bgcolor: 'warning.dark'
+                      }
+                    }}
+                  >
+                    Erişim
+                  </Button>
+                </ListItemSecondaryAction>
+              </ListItem>
+            </>
+          )}
+          
         </List>
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
           <Button 

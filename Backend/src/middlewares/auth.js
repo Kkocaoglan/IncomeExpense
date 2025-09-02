@@ -1,16 +1,61 @@
-const { verifyAccess } = require('../lib/jwt');
+const { verifyAccess, verifyRefresh } = require('../lib/jwt');
+const prisma = require('../lib/prisma');
 
-function authRequired(req, res, next) {
+async function authRequired(req, res, next) {
 	try {
+		// Önce Bearer token kontrol et
 		const auth = req.headers.authorization || '';
-		const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-		if (!token) return res.status(401).json({ error: 'unauthorized' });
+		let token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+		
+		// Bearer token yoksa, refresh cookie'den access token üret
+		if (!token) {
+			const refreshToken = req.cookies?.rt;
+			if (!refreshToken) {
+				return res.status(401).json({ error: 'unauthorized', message: 'No access token or refresh cookie' });
+			}
+			
+			try {
+				const decoded = verifyRefresh(refreshToken);
+				
+				// User'ın role'unu database'den al (await kullan)
+				const user = await prisma.user.findUnique({ 
+					where: { id: decoded.sub }, 
+					select: { role: true, email: true } 
+				});
+				
+				if (!user) {
+					return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
+				}
+				
+				req.user = { id: decoded.sub, email: user.email, role: user.role };
+				return next();
+			} catch (refreshError) {
+				return res.status(401).json({ error: 'unauthorized', message: 'Invalid refresh token' });
+			}
+		}
 
+		// Bearer token varsa normal doğrulama
 		const decoded = verifyAccess(token);
-		req.user = { id: decoded.sub, email: decoded.email };
+		
+		// Access token'da role yoksa database'den al
+		if (!decoded.role) {
+			const user = await prisma.user.findUnique({ 
+				where: { id: decoded.sub }, 
+				select: { role: true, email: true } 
+			});
+			
+			if (!user) {
+				return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
+			}
+			
+			req.user = { id: decoded.sub, email: user.email, role: user.role };
+		} else {
+			req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+		}
+		
 		return next();
 	} catch (e) {
-		return res.status(401).json({ error: 'unauthorized' });
+		return res.status(401).json({ error: 'unauthorized', message: 'Invalid access token' });
 	}
 }
 

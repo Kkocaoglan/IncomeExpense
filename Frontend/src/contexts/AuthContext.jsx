@@ -11,6 +11,9 @@ export function useAuth() {
   return context;
 }
 
+// Export AuthContext for direct usage
+export { AuthContext };
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessTokenState] = useState(null);
@@ -20,7 +23,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function tryAutoLogin() {
       try {
-        const response = await fetch('http://localhost:5001/api/auth/refresh', {
+        const base = import.meta.env.VITE_API_URL || '/api';
+        const response = await fetch(`${base}/auth/refresh`, {
           method: 'POST',
           credentials: 'include'
         });
@@ -31,7 +35,7 @@ export function AuthProvider({ children }) {
           setAccessTokenState(data.accessToken);
           
           // Access token ile kullanıcı bilgilerini al
-          const userResponse = await fetch('http://localhost:5001/api/auth/me', {
+          const userResponse = await fetch(`${base}/auth/me`, {
             headers: { Authorization: `Bearer ${data.accessToken}` }
           });
           
@@ -53,23 +57,52 @@ export function AuthProvider({ children }) {
   const login = async (email, password, remember = true) => {
     const response = await apiClient.post('/auth/login', { 
       email, 
-      password 
+      password, 
+      remember
     }, {
       credentials: 'include'
     });
 
-    setApiAccessToken(response.data.accessToken); // Update apiClient token
-    setAccessTokenState(response.data.accessToken);
-    setUser(response.data.user);
+    // MFA isteği gelirse UI bu sonucu kullanabilir
+    if (response?.mfa_required) {
+      return response; // { mfa_required: true, tmpToken }
+    }
+
+    // Normal login
+    setApiAccessToken(response.accessToken);
+    setAccessTokenState(response.accessToken);
+    setUser(response.user);
     
-    // Remember seçeneği için localStorage'a işaret koyabiliriz
+    // 🛡️ CRITICAL: Save accessToken to localStorage for AdminGuard
+    localStorage.setItem('accessToken', response.accessToken);
+    
+    // 🛡️ ADMIN AUTO-REDIRECT SECURITY
+    if (response.user?.role === 'ADMIN') {
+      // Admin login audit
+      console.warn('🛡️ ADMIN LOGIN DETECTED', {
+        email: response.user.email,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent
+      });
+      
+      // Save login timestamp for session age validation
+      localStorage.setItem('lastLoginTime', Date.now().toString());
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Return special admin flag
+      response._adminRedirect = true;
+    } else {
+      // Regular user
+      localStorage.setItem('user', JSON.stringify(response.user));
+    }
+    
     if (remember) {
       localStorage.setItem('auth_remember', 'true');
     } else {
       localStorage.removeItem('auth_remember');
     }
 
-    return response.data;
+    return response;
   };
 
   // Tek noktadan session kurulum helper: accessToken + user
@@ -91,7 +124,7 @@ export function AuthProvider({ children }) {
     console.log('🟢 Register response:', response);
 
     // E-posta doğrulama için userId döndür (backend direkt user objesini döndürüyor)
-    const userId = response?.id || response.data?.id;
+    const userId = response?.id;
     console.log('🔍 UserId extracted:', userId);
     
     // E-posta doğrulama gönder
@@ -118,12 +151,15 @@ export function AuthProvider({ children }) {
       setAccessTokenState(null);
       setUser(null);
       localStorage.removeItem('auth_remember');
+      localStorage.removeItem('accessToken'); // Clear accessToken
+      localStorage.removeItem('user'); // Clear user data
     }
   };
 
   const refreshToken = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/auth/refresh', {
+      const base = import.meta.env.VITE_API_URL || '/api';
+      const response = await fetch(`${base}/auth/refresh`, {
         method: 'POST',
         credentials: 'include'
       });

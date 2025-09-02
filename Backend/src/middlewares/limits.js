@@ -27,4 +27,16 @@ exports.adminLimiter = mk({
   max: process.env.ADMIN_MAX || 300,
 });
 
+// Refresh token rotation limiter
+exports.refreshLimiter = mk({
+  windowMin: process.env.REFRESH_WINDOW_MIN || 5,
+  max: process.env.REFRESH_MAX || 120,
+});
+
+// Email verification send limiter (IP/email spam guard)
+exports.emailSendLimiter = mk({
+  windowMin: process.env.EMAIL_SEND_WINDOW_MIN || 15,
+  max: process.env.EMAIL_SEND_MAX || 5,
+});
+
 

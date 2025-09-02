@@ -21,7 +21,7 @@ export default function Login() {
   const [isVerifyingMFA, setIsVerifyingMFA] = useState(false);
   const [mfaError, setMfaError] = useState('');
 
-  const canSubmit = email.trim() && password.length >= 6 && !submitting;
+  const canSubmit = email.trim() && password.length >= 8 && !submitting;
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -29,38 +29,23 @@ export default function Login() {
     setSubmitting(true);
     setError('');
     try {
-      const response = await apiClient.post('/auth/login', {
-        email: email.trim(),
-        password,
-        remember
-      });
-      
-             console.log('🔍 Login response:', response);
-       
-       // 2FA kontrolü
-       if (response.mfa_required) {
-         setTmpToken(response.tmpToken);
-         setShow2FAModal(true);
-         setSubmitting(false);
-         return;
-       }
-       
-       // Normal login - Response'dan gelen verileri kullan
-       const { accessToken, user } = response;
-       
-       // AuthContext'i güncelle - Zaten destructure edilmiş
-       setApiAccessToken(accessToken);
-       setAccessTokenState(accessToken);
-       setUser(user);
-      
-      // Remember seçeneği için localStorage
-      if (remember) {
-        localStorage.setItem('auth_remember', 'true');
-      } else {
-        localStorage.removeItem('auth_remember');
+      const response = await login(email.trim(), password, remember);
+      console.log('🔍 Login response:', response);
+
+      if (response?.mfa_required) {
+        setTmpToken(response.tmpToken);
+        setShow2FAModal(true);
+        setSubmitting(false);
+        return;
       }
-      
-      navigate('/', { replace: true });
+
+      // 🛡️ ADMIN AUTO-REDIRECT
+      if (response?._adminRedirect) {
+        console.warn('🛡️ Admin user detected - redirecting to admin dashboard');
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       console.log('❌ Login error:', err);
       setError('E-posta veya şifre hatalı. Tekrar deneyin.');
@@ -85,8 +70,14 @@ export default function Login() {
       });
 
       // MFA başarılı, normal login işlemini tamamla
-      await login(email.trim(), password, remember);
-      navigate('/', { replace: true });
+      const loginResponse = await login(email.trim(), password, remember);
+      
+      // 🛡️ ADMIN AUTO-REDIRECT (MFA sonrası)
+      if (loginResponse?._adminRedirect) {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (error) {
       if (error.response?.data?.error === 'invalid_code') {
         setMfaError('Kod geçersiz');
@@ -145,7 +136,7 @@ export default function Login() {
             value={password}
             onChange={(e)=>setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={8}
           />
 
           <div className={styles.options}>

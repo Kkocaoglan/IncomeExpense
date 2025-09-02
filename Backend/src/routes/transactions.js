@@ -12,15 +12,22 @@ const { parsePaging, parseSort } = require('../lib/paging');
  *     parameters:
  *       - in: query
  *         name: page
- *         schema: { type: integer, minimum: 1 }
+ *         schema:
+ *           type: integer
+ *           minimum: 1
  *       - in: query
  *         name: limit
- *         schema: { type: integer, minimum: 1, maximum: 100 }
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
  *       - in: query
  *         name: sort
- *         schema: { type: string, example: "date:desc" }
+ *         schema:
+ *           type: string
+ *           example: date:desc
  *     responses:
- *       200:
+ *       '200':
  *         description: Paginated list
  *         content:
  *           application/json:
@@ -38,17 +45,32 @@ const { parsePaging, parseSort } = require('../lib/paging');
  *     Transaction:
  *       type: object
  *       properties:
- *         id: { type: string }
- *         type: { type: string, enum: [income, expense] }
- *         amount: { type: number }
- *         currency: { type: string, example: "TRY" }
- *         category: { type: string, nullable: true }
- *         date: { type: string, format: date-time }
- *         merchant: { type: string, nullable: true }
- *         description: { type: string, nullable: true }
+ *         id:
+ *           type: string
+ *         type:
+ *           type: string
+ *           enum: [income, expense]
+ *         amount:
+ *           type: number
+ *         currency:
+ *           type: string
+ *           example: TRY
+ *         category:
+ *           type: string
+ *           nullable: true
+ *         date:
+ *           type: string
+ *           format: date-time
+ *         merchant:
+ *           type: string
+ *           nullable: true
+ *         description:
+ *           type: string
+ *           nullable: true
  *         tags:
  *           type: array
- *           items: { type: string }
+ *           items:
+ *             type: string
  */
 const router = express.Router();
 

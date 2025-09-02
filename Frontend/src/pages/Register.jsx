@@ -20,7 +20,7 @@ export default function Register() {
   const [verifyMessage, setVerifyMessage] = useState('');
   const [userId, setUserId] = useState(null);
 
-  const canSubmit = name.trim() && email.trim() && password.length >= 6 && !submitting;
+  const canSubmit = name.trim() && email.trim() && password.length >= 8 && !submitting;
 
   const handleVerifyCode = async () => {
     if (!verificationCode.trim() || verificationCode.length !== 6) {
@@ -96,8 +96,8 @@ export default function Register() {
           <input id="name" className={styles.input} value={name} onChange={e=>setName(e.target.value)} required />
           <label className={styles.label} htmlFor="remail">E-posta</label>
           <input id="remail" type="email" className={styles.input} value={email} onChange={e=>setEmail(e.target.value)} required />
-          <label className={styles.label} htmlFor="rpassword">Şifre (min 6)</label>
-          <input id="rpassword" type="password" minLength={6} className={styles.input} value={password} onChange={e=>setPassword(e.target.value)} required />
+          <label className={styles.label} htmlFor="rpassword">Şifre (min 8)</label>
+          <input id="rpassword" type="password" minLength={8} className={styles.input} value={password} onChange={e=>setPassword(e.target.value)} required />
           <button className={styles.submit} disabled={!canSubmit}>{submitting ? 'Gönderiliyor…' : 'Kayıt Ol'}</button>
         </form>
         <footer className={styles.footer}>

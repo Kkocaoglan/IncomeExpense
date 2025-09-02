@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react';
 import { Container, Grid, Typography, Paper, Button, Box, Card, CardContent, useTheme, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -187,14 +188,17 @@ const Dashboard = () => {
                 variant="contained" 
                 color="info" 
                 onClick={handleOpenIncomeCamera}
+                title="Kamera (beta)"
                 sx={{
+                  minWidth: 48,
+                  p: 1,
                   background: 'linear-gradient(45deg, #1976d2 30%, #2196f3 90%)',
                   '&:hover': {
                     background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)'
                   }
                 }}
               >
-                <AddIcon />
+                <CameraAltIcon />
               </Button>
             </Box>
             <TransactionList type="income" />
@@ -232,14 +236,17 @@ const Dashboard = () => {
                 variant="contained" 
                 color="info" 
                 onClick={handleOpenExpenseCamera}
+                title="Kamera (beta)"
                 sx={{
+                  minWidth: 48,
+                  p: 1,
                   background: 'linear-gradient(45deg, #1976d2 30%, #2196f3 90%)',
                   '&:hover': {
                     background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)'
                   }
                 }}
               >
-                <AddIcon />
+                <CameraAltIcon />
               </Button>
             </Box>
             <TransactionList type="expense" />

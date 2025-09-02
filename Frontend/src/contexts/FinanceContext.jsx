@@ -10,6 +10,7 @@ export const FinanceProvider = ({ children }) => {
   const [investments, setInvestments] = useState([]);
   const [goldPrice, setGoldPrice] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
 
   // Derived lists for backward compatibility with UI that expects incomes/expenses
   const incomes = useMemo(
@@ -75,6 +76,7 @@ export const FinanceProvider = ({ children }) => {
     });
     const normalized = { ...created, amount: Number(created.amount) };
     setTransactions(prev => [normalized, ...prev]);
+    setLastUpdated(Date.now());
     return normalized;
   };
 
@@ -82,12 +84,14 @@ export const FinanceProvider = ({ children }) => {
     const updated = await txApi.updateTransaction(id, patch);
     const normalized = { ...updated, amount: Number(updated.amount) };
     setTransactions(prev => prev.map(t => (t.id === id ? normalized : t)));
+    setLastUpdated(Date.now());
     return normalized;
   };
 
   const removeTransaction = async (id) => {
     await txApi.deleteTransaction(id);
     setTransactions(prev => prev.filter(t => t.id !== id));
+    setLastUpdated(Date.now());
   };
 
   // Backward-compat helpers used by some components
@@ -120,6 +124,7 @@ export const FinanceProvider = ({ children }) => {
     loading,
     // primary
     transactions,
+    lastUpdated,
     addTransaction,
     updateTransaction,
     removeTransaction,

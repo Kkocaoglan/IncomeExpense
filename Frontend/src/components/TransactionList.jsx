@@ -9,11 +9,15 @@ import {
   Box,
   useTheme,
   useMediaQuery,
-  Tooltip
+  Tooltip,
+  Button,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useContext } from 'react';
 import { ThemeContext } from '../contexts/ThemeContext';
+import { FinanceContext } from '../contexts/FinanceContext';
 import { listTransactions } from '../services/transactionsApi';
 
 const formatCurrency = (amount) => {
@@ -27,6 +31,7 @@ const formatCurrency = (amount) => {
 
 const TransactionList = ({ type }) => {
   const { darkMode } = useContext(ThemeContext);
+  const { lastUpdated, removeTransaction } = useContext(FinanceContext);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [rows, setRows] = useState([]);
@@ -34,6 +39,12 @@ const TransactionList = ({ type }) => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [sort, setSort] = useState('date:desc');
+
+  const fetchList = async () => {
+    const { rows: r, total: t } = await listTransactions({ page, limit, sort, type });
+    setRows(Array.isArray(r) ? r : []);
+    setTotal(Number(t) || 0);
+  };
 
   useEffect(() => {
     let alive = true;
@@ -46,13 +57,32 @@ const TransactionList = ({ type }) => {
     return () => { alive = false; };
   }, [page, limit, sort, type]);
 
+  // Refetch whenever transactions change globally
+  useEffect(() => {
+    fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUpdated]);
+
   const totalPages = Math.max(1, Math.ceil((total || 0) / limit));
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('tr-TR');
   };
 
+  const handleDelete = async (id) => {
+    if (!id) return;
+    const ok = window.confirm('Bu kaydı silmek istiyor musunuz?');
+    if (!ok) return;
+    try {
+      await removeTransaction(id);
+    } catch (e) {
+      console.error('Silme hatası:', e);
+      alert('Kayıt silinirken bir hata oluştu.');
+    }
+  };
+
   return (
+    <>
     <List>
       {rows.map((transaction) => (
         <ListItem
@@ -71,38 +101,30 @@ const TransactionList = ({ type }) => {
         >
           <ListItemText
             primary={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'space-between', width: '100%' }}>
                 <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#222' }}>
                   {transaction.description}
                 </Typography>
-                <Typography variant="body1" sx={{ color: type === 'income' ? 'success.main' : 'error.main', fontWeight: 500 }}>
-                  {formatCurrency(transaction.amount)}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', ml: 1 }}>
-                  {formatDate(transaction.date)}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {formatDate(transaction.date)}
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: type === 'income' ? 'success.main' : 'error.main', fontWeight: 600 }}>
+                    {formatCurrency(transaction.amount)}
+                  </Typography>
+                  <Tooltip title="Sil">
+                    <IconButton size="small" color="error" onClick={() => handleDelete(transaction.id)}>
+                      <Delete fontSize="small" color="error" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
             }
           />
         </ListItem>
       ))}
     </List>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-      <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Önceki</button>
-      <Typography variant="caption">Sayfa {page} / {totalPages}</Typography>
-      <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Sonraki</button>
-      <select value={limit} onChange={e=>{ setPage(1); setLimit(parseInt(e.target.value,10)); }}>
-        <option value={10}>10</option>
-        <option value={20}>20</option>
-        <option value={50}>50</option>
-      </select>
-      <select value={sort} onChange={e=>{ setPage(1); setSort(e.target.value); }}>
-        <option value="date:desc">Tarih ↓</option>
-        <option value="date:asc">Tarih ↑</option>
-        <option value="amount:desc">Tutar ↓</option>
-        <option value="amount:asc">Tutar ↑</option>
-      </select>
-    </Box>
+    </>
   );
 };
 

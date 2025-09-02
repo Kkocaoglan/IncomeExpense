@@ -18,6 +18,7 @@ model User {
   email        String        @unique
   name         String?
   passwordHash String?
+  role         String        @default("USER") // 'USER' | 'ADMIN'
   emailVerifiedAt DateTime?
   twoFAEnabled Boolean       @default(false)
   totpSecret   String?       // base32 secret (opsiyon: şifrele)
@@ -82,12 +83,14 @@ model RefreshToken {
   userId     String
   token      String   @unique
   jti        String   @unique
+  userAgent  String?
+  ip         String?
   createdAt  DateTime @default(now())
   expiresAt  DateTime
   revokedAt  DateTime?
   user       User     @relation(fields: [userId], references: [id])
 
-  @@index([userId])
+  @@index([userId, createdAt])
 }
 
 model EmailVerificationToken {
@@ -99,6 +102,7 @@ model EmailVerificationToken {
   user      User     @relation(fields: [userId], references: [id])
   
   @@index([userId])
+  @@index([token, expiresAt])
 }
 
 model TwoFABackup {
@@ -108,5 +112,24 @@ model TwoFABackup {
   usedAt    DateTime?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+  @@index([userId])
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  level       String   // CRITICAL, HIGH, MEDIUM, LOW
+  type        String   // authentication, authorization, data_access, system
+  event       String
+  details     String?
+  userId      String?
+  userEmail   String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  
+  @@index([timestamp])
+  @@index([level])
+  @@index([type])
   @@index([userId])
 }
