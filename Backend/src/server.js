@@ -72,15 +72,21 @@ app.use(cors({
 
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: isProd ? {
+  contentSecurityPolicy: {
     useDefaults: true,
     directives: {
-      defaultSrc: [process.env.CSP_DEFAULT_SRC || "'self'"],
-      imgSrc: [(process.env.CSP_IMG_SRC || "'self data:'")],
-      scriptSrc: [(process.env.CSP_SCRIPT_SRC || "'self'")],
-      styleSrc: [(process.env.CSP_STYLE_SRC || "'self'")],
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // MUI için gerekli
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: isProd ? [] : null
     }
-  } : false
+  }
 }));
 app.use(hpp());
 

@@ -1,8 +1,4 @@
-const API_BASE_URL = (typeof window !== 'undefined' && window?.import?.meta?.env?.VITE_API_URL)
-  ? window.import.meta.env.VITE_API_URL
-  : (typeof window !== 'undefined' && window.location && window.location.port === '5173')
-    ? 'http://localhost:5001/api'
-    : (import.meta?.env?.VITE_API_URL || '/api');
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Auth token management
 let currentAccessToken = null;

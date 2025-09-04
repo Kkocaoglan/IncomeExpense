@@ -3,7 +3,7 @@
  * Admin rolü kontrolü yapar
  */
 
-export function requireAdmin(req, res, next) {
+function requireAdmin(req, res, next) {
   if (req.user?.role !== 'ADMIN') {
     return res.status(403).json({ 
       error: 'forbidden',
@@ -17,7 +17,7 @@ export function requireAdmin(req, res, next) {
  * Belirli rolleri kontrol eden genel middleware
  * @param {string[]} allowedRoles - İzin verilen roller
  */
-export function requireRole(allowedRoles) {
+function requireRole(allowedRoles) {
   return (req, res, next) => {
     if (!req.user?.role || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ 
@@ -33,7 +33,7 @@ export function requireRole(allowedRoles) {
  * Admin veya kendi kullanıcısı kontrolü
  * @param {string} userIdField - Kontrol edilecek user ID field'ı (varsayılan: 'id')
  */
-export function requireAdminOrSelf(userIdField = 'id') {
+function requireAdminOrSelf(userIdField = 'id') {
   return (req, res, next) => {
     const targetUserId = req.params[userIdField] || req.body[userIdField];
     
@@ -51,3 +51,9 @@ export function requireAdminOrSelf(userIdField = 'id') {
     });
   };
 }
+
+module.exports = { 
+  requireAdmin, 
+  requireRole, 
+  requireAdminOrSelf 
+};

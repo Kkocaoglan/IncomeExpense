@@ -12,7 +12,7 @@ function setRefreshCookie(res, token) {
 	res.cookie('rt', token, {
 		httpOnly: true,
 		secure: String(process.env.COOKIE_SECURE) === 'true',
-		sameSite: 'lax',
+		sameSite: 'strict', // CSRF koruması için Strict
 		// Development'ta domain belirtme - aynı localhost için geçerli olsun
 		domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
 		path: '/', // Tüm path'lere erişebilsin
@@ -56,7 +56,10 @@ function setRefreshCookie(res, token) {
 // POST /api/auth/register
 const RegisterSchema = z.object({
 	email: z.string().email(),
-	password: z.string().min(8),
+	password: z.string()
+		.min(8, 'Şifre en az 8 karakter olmalıdır')
+		.regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
+			'Şifre en az bir küçük harf, büyük harf, rakam ve özel karakter içermelidir'),
 	name: z.string().trim().min(1).optional(),
 });
 
@@ -72,7 +75,7 @@ router.post('/register', async (req, res, next) => {
 		const existing = await prisma.user.findUnique({ where: { email } });
 		if (existing) return res.status(409).json({ error: 'email_exists' });
 
-		const passwordHash = await bcrypt.hash(password, 12);
+		const passwordHash = await bcrypt.hash(password, 14); // Güvenlik için cost 14
 		const user = await prisma.user.create({
 			data: { email, name, passwordHash },
 			select: { id: true, email: true, name: true }

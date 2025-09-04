@@ -6,7 +6,30 @@ const fs = require('fs');
 const { DocumentAnalysisClient, AzureKeyCredential } = require('@azure/ai-form-recognizer');
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+// Güvenli dosya yükleme konfigürasyonu
+const upload = multer({
+  dest: 'uploads/',
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    // Sadece image ve PDF dosyalarına izin ver
+    const allowedMimes = [
+      'image/jpeg',
+      'image/png', 
+      'image/gif',
+      'image/webp',
+      'application/pdf'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Sadece resim ve PDF dosyaları kabul edilir'), false);
+    }
+  }
+});
 
 // Environment variables kullan
 const AZURE_ENDPOINT = process.env.AZURE_ENDPOINT;
@@ -20,8 +43,20 @@ if (!AZURE_ENDPOINT || !AZURE_API_KEY) {
 // Azure Form Recognizer client'ı oluştur
 const client = new DocumentAnalysisClient(AZURE_ENDPOINT, new AzureKeyCredential(AZURE_API_KEY));
 
+// Rate limiting ekle
+const rateLimit = require('express-rate-limit');
+
+const ocrLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 dakika
+  max: 10, // IP başına maksimum 10 istek
+  message: 'Çok fazla OCR isteği. Lütfen 15 dakika sonra tekrar deneyin.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use('/ocr/', ocrLimiter); // OCR endpoint'lerine rate limiting uygula
 
 // Türkçe fiş formatlarını tanıma fonksiyonu
 function extractReceiptData(content) {

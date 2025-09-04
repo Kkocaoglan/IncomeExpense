@@ -25,7 +25,6 @@ const AdminGuard = ({ children }) => {
       console.log('🔍 AdminGuard Debug:', {
         user,
         userRole: user?.role,
-        hasAccessToken: !!localStorage.getItem('accessToken'),
         path: location.pathname
       });
 
@@ -55,10 +54,10 @@ const AdminGuard = ({ children }) => {
         return;
       }
 
-      // Layer 3: Session validation
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        console.log('❌ Layer 3 Failed: No access token');
+      // Layer 3: Session validation - Backend'de JWT cookie ile kontrol edilir
+      // Frontend'de sadece UX kontrolü yapılır
+      if (!user.id) {
+        console.log('❌ Layer 3 Failed: Invalid user session');
         setDenialReason('Geçersiz oturum');
         setSecurityCheck('denied');
         return;

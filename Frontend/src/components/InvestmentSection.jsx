@@ -1,13 +1,14 @@
 import { useState, useContext, useEffect, useMemo } from 'react';
-import { 
-  Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent, 
+import {
+  Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
-  Grid, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Divider
+  Grid, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Divider,
+  Chip, Alert, CircularProgress
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import { Add, Delete, TrendingUp, TrendingDown, Refresh } from '@mui/icons-material';
 import { FinanceContext } from '../contexts/FinanceContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-// Live price fetching removed
+import { getAllLivePrices, calculateInvestmentValue, calculateProfitLoss } from '../services/liveInvestmentService';
 
 const InvestmentSection = () => {
   const { investments, addInvestment, deleteInvestment } = useContext(FinanceContext);
@@ -19,116 +20,248 @@ const InvestmentSection = () => {
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Basit mod: canlı fiyat yok, sadece alış fiyatıyla değer hesaplanır
-  const [lastUpdated] = useState(null);
+  // Live price states
+  const [livePrices, setLivePrices] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [error, setError] = useState('');
 
-  // Yatırım türleri
+  // Investment types with emojis
   const investmentTypes = [
-    { value: 'Altın', label: 'Altın (gr)' },
-    { value: 'Gümüş', label: 'Gümüş (gr)' },
-    { value: 'Dolar', label: 'Dolar ($)' },
-    { value: 'Euro', label: 'Euro (€)' },
-    { value: 'Sterlin', label: 'Sterlin (£)' }
+    { value: 'Altın', label: 'Altın (gr)', icon: '🥇' },
+    { value: 'Gümüş', label: 'Gümüş (gr)', icon: '🥈' },
+    { value: 'Dolar', label: 'Dolar ($)', icon: '💵' },
+    { value: 'Euro', label: 'Euro (€)', icon: '💶' },
+    { value: 'Sterlin', label: 'Sterlin (£)', icon: '💷' }
   ];
 
-  // Canlı/dünkü fiyatlar kaldırıldı
+  // Function to load live prices
+  const loadLivePrices = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const prices = await getAllLivePrices();
+      if (prices) {
+        setLivePrices(prices);
+        setLastUpdated(new Date());
+      }
+    } catch (err) {
+      const errorMessage = err.message || 'Canlı fiyatlar yüklenemedi';
+      setError(errorMessage);
+      console.error('Fiyat yükleme hatası:', err);
+      
+      // Hata durumunda livePrices'ı temizle
+      setLivePrices(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load and auto-update
+  useEffect(() => {
+    loadLivePrices();
+    const interval = setInterval(loadLivePrices, 30000); // 30 saniyede bir güncelle
+    return () => clearInterval(interval);
+  }, []);
 
   const handleOpen = () => { setOpen(true); };
   const handleClose = () => {
     setOpen(false);
-    setNewInvestment({ type: 'Altın', amount: '', date: new Date().toISOString().split('T')[0] });
+    setNewInvestment({
+      type: 'Altın',
+      amount: '',
+      date: new Date().toISOString().split('T')[0]
+    });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setNewInvestment({
-      ...newInvestment,
-      [name]: name === 'amount' ? (parseFloat(String(value).replace(/[\.\s]/g, '').replace(',', '.')) || '') : value
-    });
+    setNewInvestment(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async () => {
     if (!newInvestment.amount) return;
-    // Basit mod: kullanıcıdan alış fiyatı girilecek
-    const pricePerUnit = parseFloat(prompt('Alış fiyatı (TRY) birim başına:') || '0');
+
+    // Canlı fiyat kontrolü
+    if (!livePrices) {
+      setError('Canlı fiyatlar yüklenemedi. Lütfen önce fiyatları yenileyin.');
+      return;
+    }
+
+    // Get live price for the new investment
+    let currentPrice = 0;
+    switch (newInvestment.type) {
+      case 'Altın':
+        currentPrice = livePrices.gold;
+        break;
+      case 'Gümüş':
+        currentPrice = livePrices.silver;
+        break;
+      case 'Dolar':
+        currentPrice = livePrices.forex.USD;
+        break;
+      case 'Euro':
+        currentPrice = livePrices.forex.EUR;
+        break;
+      case 'Sterlin':
+        currentPrice = livePrices.forex.GBP;
+        break;
+      default:
+        currentPrice = 0;
+    }
+
+    if (currentPrice <= 0) {
+      setError(`${newInvestment.type} için geçerli fiyat bulunamadı. Lütfen fiyatları yenileyin.`);
+      return;
+    }
+
     const investment = {
       ...newInvestment,
       id: Date.now(),
-      price: pricePerUnit || 0,
-      amount: parseFloat(newInvestment.amount)
+      price: currentPrice, // Use live price as purchase price
+      amount: parseFloat(newInvestment.amount),
+      purchaseDate: newInvestment.date
     };
+
     addInvestment(investment);
     handleClose();
   };
 
-  const formatTRY = (n) => (n || 0).toLocaleString('tr-TR') + ' ₺';
+  const formatTRY = (n) => (n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
   const formatDate = (dateString) => new Intl.DateTimeFormat('tr-TR').format(new Date(dateString));
-  const currentValue = (investment) => investment.amount * (investment.price || 0);
-  // Günlük getiri kaldırıldı
 
   const paperStyle = {
-    p: 2, 
-    mb: 2,
-    bgcolor: darkMode ? 'grey.800' : 'background.paper',
-    color: darkMode ? 'white' : 'inherit'
+    p: 3,
+    mb: 3,
+    bgcolor: darkMode ? 'grey.800' : 'background.paper'
   };
 
   return (
     <>
+      {/* Investment List */}
       <Paper elevation={3} sx={paperStyle}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">Yatırımlarım</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {lastUpdated && (
               <Typography variant="body2" color="text.secondary">
-                Güncellendi: {lastUpdated.toLocaleTimeString('tr-TR')}
+                Son Güncelleme: {lastUpdated.toLocaleTimeString('tr-TR')}
               </Typography>
             )}
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={loadLivePrices}
+              disabled={loading}
+              size="small"
+            >
+              {loading ? <CircularProgress size={16} /> : 'Yenile'}
+            </Button>
             <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleOpen}>
               Yeni Yatırım
             </Button>
           </Box>
         </Box>
-        {/* Günlük getiri kaldırıldı (canlı fiyat yok) */}
 
         <Divider sx={{ mb: 2 }} />
+
+        {error && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {livePrices && livePrices.isFallback && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Bilgi:</strong> Canlı fiyatlar alınamadığı için yaklaşık değerler kullanılıyor. 
+              Gerçek fiyatlar için "Yenile" butonuna tıklayın.
+            </Typography>
+          </Alert>
+        )}
 
         {investments.length === 0 ? (
           <Typography variant="body1" align="center">Henüz yatırım kaydı yok</Typography>
         ) : (
           <List>
-            {investments.map((inv) => (
-              <ListItem key={inv.id} divider>
-                <ListItemText
-                  primary={`${inv.type}: ${inv.amount} ${inv.type === 'Altın' || inv.type === 'Gümüş' ? 'gr' : inv.type === 'Dolar' ? '$' : inv.type === 'Euro' ? '€' : '£'}`}
-                  secondary={
-                    <>
-                      <Typography component="span" variant="body2" color="text.secondary">
-                        Alış Değeri: {formatTRY(inv.amount * (inv.price || 0))}
-                      </Typography>
-                      {' - '}
-                      <Typography component="span" variant="body2" color={currentValue(inv) >= (inv.amount * (inv.price || 0)) ? 'success.main' : 'error.main'}>
-                        Güncel Değer: {formatTRY(currentValue(inv))}
-                      </Typography>
-                      {/* Günlük getiri kaldırıldı */}
-                      <Typography component="span" variant="body2" color="text.secondary">
-                        {formatDate(inv.date)}
-                      </Typography>
-                    </>
-                  }
-                />
-                <ListItemSecondaryAction>
-                  <IconButton edge="end" aria-label="delete" onClick={() => deleteInvestment(inv.id)} color="error">
-                    <Delete />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
+            {investments.map((inv) => {
+              const currentValue = calculateInvestmentValue(inv, livePrices);
+              const profitLoss = calculateProfitLoss(inv, livePrices);
+              const isProfit = profitLoss.profitLoss >= 0;
+
+              return (
+                <ListItem key={inv.id} divider>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6">
+                          {inv.type === 'Altın' || inv.type === 'Gümüş' ? '🥇' : '💵'} {inv.type}
+                        </Typography>
+                        <Chip
+                          label={`${inv.amount} ${inv.type === 'Altın' || inv.type === 'Gümüş' ? 'gr' : inv.type === 'Dolar' ? '$' : inv.type === 'Euro' ? '€' : '£'}`}
+                          size="small"
+                          color="primary"
+                        />
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ mt: 1 }}>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              Alış Tarihi: {formatDate(inv.purchaseDate)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Alış Fiyatı: {formatTRY(inv.price)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Alış Değeri: {formatTRY(inv.amount * inv.price)}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              Güncel Fiyat: {formatTRY(livePrices ?
+                                (inv.type === 'Altın' ? livePrices.gold :
+                                 inv.type === 'Gümüş' ? livePrices.silver :
+                                 livePrices.forex[inv.type]) : inv.price
+                              )}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Güncel Değer: {formatTRY(currentValue)}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                              {isProfit ? <TrendingUp color="success" /> : <TrendingDown color="error" />}
+                              <Typography
+                                variant="body2"
+                                color={isProfit ? 'success.main' : 'error.main'}
+                                sx={{ fontWeight: 'bold' }}
+                              >
+                                {isProfit ? '+' : ''}{formatTRY(profitLoss.profitLoss)}
+                                ({isProfit ? '+' : ''}{profitLoss.profitLossPercentage.toFixed(2)}%)
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </Box>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <IconButton edge="end" aria-label="delete" onClick={() => deleteInvestment(inv.id)} color="error">
+                      <Delete />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              );
+            })}
           </List>
         )}
       </Paper>
 
-      <Dialog open={open} onClose={handleClose}>
+      {/* Yeni Yatırım Dialog */}
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>Yeni Yatırım Ekle</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -143,7 +276,9 @@ const InvestmentSection = () => {
                   onChange={handleChange}
                 >
                   {investmentTypes.map((t) => (
-                    <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+                    <MenuItem key={t.value} value={t.value}>
+                      {t.icon} {t.label}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -168,7 +303,7 @@ const InvestmentSection = () => {
             <Grid item xs={12}>
               <TextField
                 name="date"
-                label="Tarih"
+                label="Alış Tarihi"
                 type="date"
                 fullWidth
                 variant="outlined"
@@ -177,7 +312,34 @@ const InvestmentSection = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            {/* Anlık değer önizlemesi kaldırıldı */}
+
+            {/* Canlı Fiyat Önizlemesi */}
+            {newInvestment.amount && livePrices && (
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    <strong>Canlı Fiyat:</strong> {
+                      newInvestment.type === 'Altın' ? formatTRY(livePrices.gold) :
+                      newInvestment.type === 'Gümüş' ? formatTRY(livePrices.silver) :
+                      newInvestment.type === 'Dolar' ? formatTRY(livePrices.forex.USD) :
+                      newInvestment.type === 'Euro' ? formatTRY(livePrices.forex.EUR) :
+                      formatTRY(livePrices.forex.GBP)
+                    } / birim
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Tahmini Değer:</strong> {formatTRY(
+                      newInvestment.amount * (
+                        newInvestment.type === 'Altın' ? livePrices.gold :
+                        newInvestment.type === 'Gümüş' ? livePrices.silver :
+                        newInvestment.type === 'Dolar' ? livePrices.forex.USD :
+                        newInvestment.type === 'Euro' ? livePrices.forex.EUR :
+                        livePrices.forex.GBP
+                      )
+                    )}
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>

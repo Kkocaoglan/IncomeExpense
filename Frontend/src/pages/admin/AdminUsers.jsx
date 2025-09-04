@@ -59,6 +59,15 @@ const AdminUsers = () => {
     user: null,
     newRole: ''
   });
+  
+  // Step-up authentication for critical operations
+  const [stepUpAuth, setStepUpAuth] = useState({
+    open: false,
+    operation: null,
+    password: '',
+    mfaCode: '',
+    loading: false
+  });
 
   useEffect(() => {
     loadUsers();
@@ -82,19 +91,69 @@ const AdminUsers = () => {
         pages: response.pagination.pages
       }));
     } catch (err) {
-      setError('Kullanıcılar yüklenemedi: ' + err.message);
+      // Kullanıcı dostu hata mesajları
+      let userFriendlyError = 'Kullanıcılar yüklenemedi';
+      if (err.message.includes('401')) {
+        userFriendlyError = 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
+      } else if (err.message.includes('403')) {
+        userFriendlyError = 'Bu işlem için yetkiniz bulunmamaktadır.';
+      } else if (err.message.includes('500')) {
+        userFriendlyError = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
+      }
+      setError(userFriendlyError);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRoleUpdate = async () => {
+    // Step-up authentication required for role changes
+    setStepUpAuth({
+      open: true,
+      operation: {
+        type: 'role_update',
+        userId: editDialog.user.id,
+        newRole: editDialog.newRole,
+        userEmail: editDialog.user.email
+      },
+      password: '',
+      mfaCode: '',
+      loading: false
+    });
+  };
+
+  const confirmRoleUpdate = async () => {
     try {
-      await adminApi.users.updateUserRole(editDialog.user.id, editDialog.newRole);
-      setEditDialog({ open: false, user: null, newRole: '' });
-      await loadUsers(); // Refresh list
+      setStepUpAuth(prev => ({ ...prev, loading: true }));
+      
+      // Verify step-up authentication
+      const verified = await adminApi.auth.verifyStepUp({
+        password: stepUpAuth.password,
+        mfaCode: stepUpAuth.mfaCode
+      });
+      
+      if (verified) {
+        // Proceed with role update
+        await adminApi.users.updateUserRole(
+          stepUpAuth.operation.userId, 
+          stepUpAuth.operation.newRole
+        );
+        
+        setEditDialog({ open: false, user: null, newRole: '' });
+        setStepUpAuth({ open: false, operation: null, password: '', mfaCode: '', loading: false });
+        await loadUsers(); // Refresh list
+        
+        // Security audit log
+        console.warn('🛡️ ADMIN ACTION: Role updated', {
+          targetUser: stepUpAuth.operation.userEmail,
+          newRole: stepUpAuth.operation.newRole,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (err) {
       setError('Rol güncellenemedi: ' + err.message);
+    } finally {
+      setStepUpAuth(prev => ({ ...prev, loading: false }));
     }
   };
 
