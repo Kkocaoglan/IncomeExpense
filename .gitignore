@@ -1,0 +1,34 @@
+# Log dosyaları - repoda olmamalı
+logs/
+*.log
+*.log.*
+
+# Geçici dosyalar
+*.tmp
+*.temp
+
+# IDE ve editor dosyaları
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS dosyaları
+.DS_Store
+Thumbs.db
+
+# Backup dosyaları
+*.bak
+*.backup
+
+# Test ve Debug dosyaları (geliştirme sırasında kullanılan, production'da gereksiz)
+test-*.js
+test-*.sh
+test-*.ps1
+decode-*.js
+debug-*.js
+check-*.js
+quick-*.js
+
+# Boş/Yarım dokümantasyon dosyaları
+PROJE_ANALIZ_RAPORU.md

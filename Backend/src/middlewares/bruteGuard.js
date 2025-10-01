@@ -1,42 +1,67 @@
-// Basit IP+email brute force guard. Production için Redis önerilir.
-const misses = new Map(); // key -> { count, until }
+// Redis tabanlı brute force guard
+const { redis } = require('../lib/redis.js');
 
 function keyFrom(req) {
   const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0] || req.socket.remoteAddress || 'ip';
-  const email = (req.body?.email || '').toLowerCase() || 'anon';
-  return `${ip}:${email}`;
+  const route = req.route?.path || req.path || 'unknown';
+  return `bf:${ip}:${route}`;
 }
 
-exports.bruteGuard = function bruteGuard() {
-  return (req, res, next) => {
-    const key = keyFrom(req);
-    const st = misses.get(key);
-    const now = Date.now();
-    if (st?.until && st.until > now) {
-      const sec = Math.ceil((st.until - now) / 1000);
-      return res.status(429).json({ error: 'too_many_attempts', retryInSec: sec });
+function bruteGuard() {
+  const maxAttempts = Number(process.env.BRUTE_MAX) || 10;
+  const ttlSec = Number(process.env.BRUTE_TTL_SEC) || 300;
+
+  return async (req, res, next) => {
+    try {
+      const key = keyFrom(req);
+      const attempts = await redis.get(key);
+      
+      if (attempts && Number(attempts) >= maxAttempts) {
+        const ttl = await redis.ttl(key);
+        return res.status(429).json({ 
+          error: 'too_many_attempts', 
+          retryInSec: ttl > 0 ? ttl : ttlSec 
+        });
+      }
+      
+      req._bruteKey = key;
+      next();
+    } catch (error) {
+      console.error('Brute guard Redis hatası:', error);
+      // Redis hatası durumunda middleware'i geç
+      next();
     }
-    req._bruteKey = key;
-    next();
   };
 }
 
-exports.onLoginFail = function onLoginFail(req) {
-  const key = req._bruteKey;
-  if (!key) return;
-  const st = misses.get(key) || { count: 0, until: 0 };
-  st.count += 1;
-  if (st.count >= 5) {
-    st.until = Date.now() + 5 * 60 * 1000; // 5 dk
-    st.count = 0;
+async function onLoginFail(req) {
+  try {
+    const key = req._bruteKey;
+    if (!key) return;
+    
+    const ttlSec = Number(process.env.BRUTE_TTL_SEC) || 300;
+    const current = await redis.incr(key);
+    
+    if (current === 1) {
+      // İlk başarısız deneme, TTL belirle
+      await redis.expire(key, ttlSec);
+    }
+  } catch (error) {
+    console.error('onLoginFail Redis hatası:', error);
   }
-  misses.set(key, st);
 }
 
-exports.onLoginSuccess = function onLoginSuccess(req) {
-  const key = req._bruteKey;
-  if (!key) return;
-  misses.delete(key);
+async function onLoginSuccess(req) {
+  try {
+    const key = req._bruteKey;
+    if (!key) return;
+    
+    await redis.del(key);
+  } catch (error) {
+    console.error('onLoginSuccess Redis hatası:', error);
+  }
 }
+
+module.exports = { bruteGuard, onLoginFail, onLoginSuccess };
 
 

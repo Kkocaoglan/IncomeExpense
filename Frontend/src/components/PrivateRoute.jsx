@@ -16,7 +16,7 @@ export default function PrivateRoute({ children }) {
         fontSize: '16px',
         color: '#666'
       }}>
-        Yükleniyor...
+        {/* Yükleniyor ifadesi kaldırıldı */}
       </div>
     );
   }

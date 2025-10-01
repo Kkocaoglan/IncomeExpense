@@ -1,31 +1,40 @@
-// Minimal, memory-based idempotency. Production için Redis önerilir.
-const seen = new Map(); // key -> expireAt (ms)
+// Redis tabanlı idempotency middleware
+const { redis } = require('../lib/redis.js');
+const { createHash } = require('crypto');
 
 function idempotency(requiredOn = ['POST', 'PUT', 'PATCH', 'DELETE']) {
-  const ttl = (Number(process.env.IDEMPOTENCY_TTL_SEC) || 86400) * 1000;
-  return (req, res, next) => {
-    if (!requiredOn.includes(req.method)) return next();
+  const ttlSec = Number(process.env.IDEMPOTENCY_TTL_SEC) || 60;
+  
+  return async (req, res, next) => {
+    try {
+      if (!requiredOn.includes(req.method)) return next();
 
-    const key = req.headers['idempotency-key'];
-    if (!key) return next(); // zorunlu istenirse 400 döndürülebilir
+      const idempotencyKey = req.headers['idempotency-key'];
+      if (!idempotencyKey) return next(); // zorunlu istenirse 400 döndürülebilir
 
-    const userId = req.user?.id || 'anon';
-    const cacheKey = `${userId}:${req.method}:${req.originalUrl}:${key}`;
+      const userId = req.user?.id || 'anon';
+      const route = req.route?.path || req.originalUrl;
+      
+      // Body hash ile beraber key oluştur
+      const bodyHash = req.body ? createHash('sha256').update(JSON.stringify(req.body)).digest('hex').substring(0, 16) : 'nobody';
+      const cacheKey = `idem:${userId}:${route}:${createHash('sha256').update(idempotencyKey + bodyHash).digest('hex')}`;
 
-    const now = Date.now();
-    const expireAt = seen.get(cacheKey);
-    if (expireAt && expireAt > now) {
-      return res.status(409).json({ error: 'duplicate_request' });
+      // Redis SET NX EX kullanarak atomic check-and-set
+      const result = await redis.set(cacheKey, '1', 'EX', ttlSec, 'NX');
+      
+      if (!result) {
+        // Key zaten var, duplicate request
+        return res.status(409).json({ error: 'duplicate_request' });
+      }
+      
+      next();
+    } catch (error) {
+      console.error('Idempotency Redis hatası:', error);
+      // Redis hatası durumunda middleware'i geç
+      next();
     }
-    seen.set(cacheKey, now + ttl);
-    next();
   };
 }
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of seen.entries()) if (v <= now) seen.delete(k);
-}, 60_000).unref();
 
 module.exports = { idempotency };
 

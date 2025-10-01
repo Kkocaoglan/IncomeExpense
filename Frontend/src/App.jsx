@@ -21,7 +21,6 @@ import AdminGuard from './components/admin/AdminGuard';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
-import AdminSystem from './pages/admin/AdminSystem';
 import AdminSecurity from './pages/admin/AdminSecurity';
 
 function App() {
@@ -44,7 +43,6 @@ function App() {
             }>
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
-              <Route path="system" element={<AdminSystem />} />
               <Route path="security" element={<AdminSecurity />} />
               <Route path="" element={<AdminDashboard />} />
             </Route>

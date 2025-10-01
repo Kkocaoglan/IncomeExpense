@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { hashPasswordWithPepper } from '../src/lib/passwordUtils.js';
 
 const prisma = new PrismaClient();
 
@@ -7,7 +7,7 @@ async function main() {
   console.log('Seeding starting...');
 
   // 1) Admin User
-  const adminPasswordHash = await bcrypt.hash('Admin123!', 12);
+  const adminPasswordHash = await hashPasswordWithPepper('Admin123456!');
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
     update: {
@@ -25,7 +25,7 @@ async function main() {
   });
 
   // 2) Demo User
-  const passwordHash = await bcrypt.hash('P@ssw0rd!', 12);
+  const passwordHash = await hashPasswordWithPepper('P@ssw0rd12!');
   const user = await prisma.user.upsert({
     where: { email: 'demo@example.com' },
     update: {

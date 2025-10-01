@@ -67,25 +67,12 @@ const AdminLayout = () => {
       sensitive: true
     },
     {
-      text: 'Sistem Durumu',
-      icon: <AssessmentIcon />,
-      path: '/admin/system',
-      badge: null
-    },
-    {
       text: 'Güvenlik Logları',
       icon: <SecurityIcon />,
       path: '/admin/security',
       badge: null,
       sensitive: true
     },
-    {
-      text: 'Sistem Ayarları',
-      icon: <SettingsIcon />,
-      path: '/admin/settings',
-      badge: null,
-      sensitive: true
-    }
   ];
 
   const handleDrawerToggle = () => {

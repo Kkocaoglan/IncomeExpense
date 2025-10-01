@@ -3,6 +3,8 @@ const prisma = require('../lib/prisma');
 const { authRequired } = require('../middlewares/auth');
 const { parsePaging, parseSort } = require('../lib/paging');
 const { z } = require('zod');
+const { azureOCRBreaker } = require('../lib/circuitBreaker');
+const { isEnabled } = require('../config/flags');
 
 const router = express.Router();
 
@@ -35,6 +37,51 @@ router.post('/', authRequired, async (req, res, next) => {
   try {
     const body = CreateSchema.parse(req.body);
     const created = await prisma.receipt.create({ data: { ...body, userId: req.user.id } });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+// POST /api/receipts/ocr - OCR endpoint with larger payload limit
+router.post('/ocr', authRequired, async (req, res, next) => {
+  try {
+    const ocrSchema = z.object({
+      fileRef: z.string(),
+      imageData: z.string().optional(), // Base64 image data
+      ocrData: z.any().optional(), // Pre-processed OCR sonuçları
+      confidence: z.number().min(0).max(1).optional(),
+      processingTime: z.number().optional(),
+    });
+    
+    const body = ocrSchema.parse(req.body);
+    
+    let ocrResult = body.ocrData;
+    
+    // Eğer imageData varsa ve Azure OCR etkinse, OCR işlemi yap
+    if (body.imageData && isEnabled('ENABLE_AZURE_OCR') && isEnabled('ENABLE_OCR_CIRCUIT_BREAKER')) {
+      try {
+        // Circuit breaker ile OCR işlemi
+        ocrResult = await azureOCRBreaker.fire(body.imageData);
+      } catch (error) {
+        console.error('OCR processing error:', error);
+        return res.status(500).json({
+          error: 'ocr_processing_failed',
+          message: 'OCR işlemi başarısız oldu'
+        });
+      }
+    }
+    
+    // OCR verilerini işle ve receipt oluştur
+    const receiptData = {
+      fileRef: body.fileRef,
+      ocrJson: ocrResult,
+      total: ocrResult?.total || null,
+      tax: ocrResult?.tax || null,
+      merchant: ocrResult?.merchant || null,
+      date: ocrResult?.date ? new Date(ocrResult.date) : null,
+      userId: req.user.id
+    };
+    
+    const created = await prisma.receipt.create({ data: receiptData });
     res.status(201).json(created);
   } catch (e) { next(e); }
 });

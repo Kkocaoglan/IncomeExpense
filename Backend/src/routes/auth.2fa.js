@@ -96,7 +96,12 @@ r.post('/mfa/verify', async (req, res, next) => {
     const ok = authenticator.verify({ token: code, secret: user.totpSecret });
     if (!ok) return res.status(401).json({ error: 'invalid_code' });
 
-    const accessToken = signAccess({ sub: user.id, email: user.email });
+    const accessToken = signAccess({ 
+      sub: user.id, 
+      email: user.email, 
+      role: user.role,
+      mfaVerified: true // 2FA başarıyla geçildi
+    });
     const jti = uuidv4();
     const refreshToken = signRefresh({ sub: user.id, jti, remember: true });
     const exp = new Date(Date.now() + 7*24*60*60*1000);
@@ -133,7 +138,12 @@ r.post('/mfa/verify-backup', async (req, res, next) => {
 
     await prisma.twoFABackup.update({ where: { id: hit.id }, data: { usedAt: new Date() } });
 
-    const accessToken = signAccess({ sub: user.id, email: user.email });
+    const accessToken = signAccess({ 
+      sub: user.id, 
+      email: user.email, 
+      role: user.role,
+      mfaVerified: true // 2FA backup code ile geçildi
+    });
     const jti = uuidv4();
     const refreshToken = signRefresh({ sub: user.id, jti, remember: true });
     const exp = new Date(Date.now() + 7*24*60*60*1000);

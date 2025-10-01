@@ -26,13 +26,24 @@ r.post('/email/send', async (req, res, next) => {
       data: { userId, token: code, expiresAt: expires } 
     });
 
-    await sendMail({
-      to: user.email,
-      subject: 'E-posta doğrulama kodu',
-      html: `<p>Merhaba, e-posta doğrulama kodun: <strong>${code}</strong></p><p>Bu kod 15 dakika geçerlidir.</p>`
-    });
-
-    res.json({ ok: true });
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'E-posta doğrulama kodu',
+        html: `<p>Merhaba, e-posta doğrulama kodun: <strong>${code}</strong></p><p>Bu kod 15 dakika geçerlidir.</p>`
+      });
+      
+      console.log('✅ Email sent successfully to:', user.email);
+      res.json({ ok: true });
+    } catch (emailError) {
+      console.log('❌ Email send failed:', emailError.message);
+      // Development'ta email hatası kritik değil
+      res.json({ 
+        ok: true, 
+        warning: 'Email gönderilemedi ama kullanıcı oluşturuldu',
+        emailError: emailError.message 
+      });
+    }
   } catch (e) { 
     next(e); 
   }

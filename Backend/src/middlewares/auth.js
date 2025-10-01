@@ -27,7 +27,12 @@ async function authRequired(req, res, next) {
 					return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
 				}
 				
-				req.user = { id: decoded.sub, email: user.email, role: user.role };
+				req.user = { 
+					id: decoded.sub, 
+					email: user.email, 
+					role: user.role,
+					mfaVerified: false // Refresh token'dan geldiğinde MFA re-verification gerekir
+				};
 				return next();
 			} catch (refreshError) {
 				return res.status(401).json({ error: 'unauthorized', message: 'Invalid refresh token' });
@@ -50,7 +55,12 @@ async function authRequired(req, res, next) {
 			
 			req.user = { id: decoded.sub, email: user.email, role: user.role };
 		} else {
-			req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+			req.user = { 
+				id: decoded.sub, 
+				email: decoded.email, 
+				role: decoded.role,
+				mfaVerified: decoded.mfaVerified || false
+			};
 		}
 		
 		return next();

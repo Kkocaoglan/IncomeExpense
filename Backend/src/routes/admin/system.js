@@ -1,6 +1,8 @@
 const express = require('express');
 const { authRequired } = require('../../middlewares/auth.js');
 const { requireAdmin } = require('../../middlewares/rbac.js');
+const { requireAdminMFA } = require('../../middlewares/requireAdminMFA.js');
+const { requireSudo } = require('../../middlewares/requireSudo.js');
 const prisma = require('../../lib/prisma.js');
 const os = require('os');
 

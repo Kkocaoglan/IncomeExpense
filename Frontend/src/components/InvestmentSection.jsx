@@ -37,24 +37,12 @@ const InvestmentSection = () => {
 
   // Function to load live prices
   const loadLivePrices = async () => {
-    setLoading(true);
+    // Test için external API'leri devre dışı bırak
+    setLoading(false);
     setError('');
-    try {
-      const prices = await getAllLivePrices();
-      if (prices) {
-        setLivePrices(prices);
-        setLastUpdated(new Date());
-      }
-    } catch (err) {
-      const errorMessage = err.message || 'Canlı fiyatlar yüklenemedi';
-      setError(errorMessage);
-      console.error('Fiyat yükleme hatası:', err);
-      
-      // Hata durumunda livePrices'ı temizle
-      setLivePrices(null);
-    } finally {
-      setLoading(false);
-    }
+    setLivePrices({});
+    setLastUpdated(new Date());
+    return;
   };
 
   // Initial load and auto-update
@@ -144,7 +132,20 @@ const InvestmentSection = () => {
       {/* Investment List */}
       <Paper elevation={3} sx={paperStyle}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Yatırımlarım</Typography>
+          <Typography variant="h6">
+            Yatırımlarım 
+            <span style={{ 
+              fontSize: '12px', 
+              backgroundColor: '#ff6b35', 
+              color: 'white', 
+              padding: '2px 6px', 
+              borderRadius: '4px', 
+              marginLeft: '8px',
+              fontWeight: 'bold'
+            }}>
+              BETA
+            </span>
+          </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {lastUpdated && (
               <Typography variant="body2" color="text.secondary">

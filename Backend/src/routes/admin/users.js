@@ -1,9 +1,24 @@
 const express = require('express');
 const { authRequired } = require('../../middlewares/auth.js');
 const { requireAdmin } = require('../../middlewares/rbac.js');
+const { requireAdminMFA } = require('../../middlewares/requireAdminMFA.js');
+const { requireSudo } = require('../../middlewares/requireSudo.js');
+const { autoSecurityLog } = require('../../middlewares/securityLogger.js');
+const { z } = require('zod');
 const prisma = require('../../lib/prisma.js');
 
 const router = express.Router();
+
+// Validation schemas
+const RoleUpdateSchema = z.object({
+  role: z.enum(['USER', 'ADMIN'], {
+    errorMap: () => ({ message: 'Role must be either USER or ADMIN' })
+  })
+});
+
+const SessionRevokeSchema = z.object({
+  reason: z.string().optional() // Opsiyonel sebep
+});
 
 // Tüm kullanıcıları listele (sayfalama ve filtreleme ile)
 router.get('/', authRequired, requireAdmin, async (req, res, next) => {
@@ -33,7 +48,8 @@ router.get('/', authRequired, requireAdmin, async (req, res, next) => {
           email: true,
           role: true,
           createdAt: true,
-          lastLoginAt: true,
+          emailVerifiedAt: true,
+          twoFAEnabled: true,
           _count: {
             select: {
               transactions: true,
@@ -85,15 +101,11 @@ router.get('/', authRequired, requireAdmin, async (req, res, next) => {
   }
 });
 
-// Kullanıcı rolünü güncelle
-router.patch('/:id/role', authRequired, requireAdmin, async (req, res, next) => {
+// Kullanıcı rolünü güncelle (Kritik işlem - Sudo gerekli)
+router.patch('/:id/role', authRequired, requireAdminMFA, requireSudo, autoSecurityLog, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
-    
-    if (!['USER', 'ADMIN'].includes(role)) {
-      return res.status(400).json({ error: 'invalid_role' });
-    }
+    const { role } = RoleUpdateSchema.parse(req.body);
     
     // Kendi rolünü değiştirmeye çalışıyorsa engelle
     if (id === req.user.id) {
@@ -112,10 +124,11 @@ router.patch('/:id/role', authRequired, requireAdmin, async (req, res, next) => 
   }
 });
 
-// Kullanıcının tüm oturumlarını sonlandır
-router.post('/:id/revoke-sessions', authRequired, requireAdmin, async (req, res, next) => {
+// Kullanıcının tüm oturumlarını sonlandır (Kritik işlem - Sudo gerekli)
+router.post('/:id/revoke-sessions', authRequired, requireAdminMFA, requireSudo, autoSecurityLog, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { reason } = SessionRevokeSchema.parse(req.body);
     
     await prisma.refreshToken.updateMany({
       where: { 

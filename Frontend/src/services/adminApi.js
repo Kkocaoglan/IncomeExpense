@@ -138,6 +138,42 @@ export const adminSystem = {
   }
 };
 
+// Security Management API calls
+export const adminSecurity = {
+  // Güvenlik loglarını getir
+  async getLogs(params = {}) {
+    ensureAdmin();
+    const query = new URLSearchParams(params);
+    return apiClient.get(`/admin/security/logs?${query}`);
+  },
+
+  // Güvenlik istatistikleri
+  async getStats() {
+    ensureAdmin();
+    return apiClient.get('/admin/security/stats');
+  },
+
+  // Logları dışa aktar
+  async exportLogs(filters = {}) {
+    ensureAdmin();
+    return apiClient.post('/admin/security/export', filters, {
+      responseType: 'blob'
+    });
+  },
+
+  // Logları temizle
+  async clearLogs() {
+    ensureAdmin();
+    
+    // Confirm dialog gerekli
+    if (!window.confirm('Tüm güvenlik logları silinecek. Bu işlem geri alınamaz. Emin misiniz?')) {
+      throw new Error('OPERATION_CANCELLED: User cancelled');
+    }
+    
+    return apiClient.delete('/admin/security/clear');
+  }
+};
+
 // Security audit logging
 const logAdminAction = (action, params = {}) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -188,10 +224,12 @@ const wrapWithAudit = (apiObject, objectName) => {
 export const auditedAdminDashboard = wrapWithAudit(adminDashboard, 'dashboard');
 export const auditedAdminUsers = wrapWithAudit(adminUsers, 'users');
 export const auditedAdminSystem = wrapWithAudit(adminSystem, 'system');
+export const auditedAdminSecurity = wrapWithAudit(adminSecurity, 'security');
 
 // Default exports for convenience
 export default {
   dashboard: auditedAdminDashboard,
   users: auditedAdminUsers,
-  system: auditedAdminSystem
+  system: auditedAdminSystem,
+  security: auditedAdminSecurity
 };

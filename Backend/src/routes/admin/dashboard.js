@@ -5,8 +5,8 @@ const { requireAdmin } = require('../../middlewares/rbac');
 
 const router = express.Router();
 
-// Tüm admin route'ları korumalı
-router.use(authRequired, requireAdmin);
+// Tüm admin route'ları korumalı - Bu middleware'ler server.js'te tanımlandı
+// router.use(authRequired, requireAdmin); // REMOVED: server.js'te enforceAdmin2FA ile handle ediliyor
 
 /**
  * GET /api/admin/dashboard/stats

@@ -19,7 +19,10 @@ async function refreshAccessToken() {
 
   refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'X-Requested-By': 'IncomeExpenses-Frontend'
+    }
   }).then(async (response) => {
     if (response.ok) {
       const data = await response.json();
@@ -51,6 +54,7 @@ class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
+      'X-Requested-By': 'IncomeExpenses-Frontend',
       ...options.headers,
     };
 
@@ -133,9 +137,18 @@ class ApiClient {
   // POST with FormData (for file uploads)
   async postFormData(endpoint, formData, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    
+    // Add security headers for FormData too
+    const headers = {
+      'X-Requested-By': 'IncomeExpenses-Frontend',
+      ...(options.headers || {})
+    };
+    
     const config = {
       method: 'POST',
       body: formData,
+      headers,
+      credentials: 'include',
       ...options,
     };
 

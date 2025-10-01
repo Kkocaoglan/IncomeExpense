@@ -20,7 +20,19 @@ export default function Register() {
   const [verifyMessage, setVerifyMessage] = useState('');
   const [userId, setUserId] = useState(null);
 
-  const canSubmit = name.trim() && email.trim() && password.length >= 8 && !submitting;
+  // Şifre validasyonu
+  const validatePassword = (pwd) => {
+    const errors = [];
+    if (pwd.length < 10) errors.push('En az 10 karakter');
+    if (!/[A-Z]/.test(pwd)) errors.push('En az 1 büyük harf');
+    if (!/[a-z]/.test(pwd)) errors.push('En az 1 küçük harf');
+    if (!/[0-9]/.test(pwd)) errors.push('En az 1 rakam');
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) errors.push('En az 1 noktalama işareti');
+    return errors;
+  };
+
+  const passwordErrors = validatePassword(password);
+  const canSubmit = name.trim() && email.trim() && passwordErrors.length === 0 && !submitting;
 
   const handleVerifyCode = async () => {
     if (!verificationCode.trim() || verificationCode.length !== 6) {
@@ -96,8 +108,18 @@ export default function Register() {
           <input id="name" className={styles.input} value={name} onChange={e=>setName(e.target.value)} required />
           <label className={styles.label} htmlFor="remail">E-posta</label>
           <input id="remail" type="email" className={styles.input} value={email} onChange={e=>setEmail(e.target.value)} required />
-          <label className={styles.label} htmlFor="rpassword">Şifre (min 8)</label>
-          <input id="rpassword" type="password" minLength={8} className={styles.input} value={password} onChange={e=>setPassword(e.target.value)} required />
+          <label className={styles.label} htmlFor="rpassword">Şifre (min 10 karakter, büyük harf, rakam, noktalama işareti)</label>
+          <input id="rpassword" type="password" minLength={10} className={styles.input} value={password} onChange={e=>setPassword(e.target.value)} required />
+          {password && passwordErrors.length > 0 && (
+            <div className={styles.error}>
+              Şifre gereksinimleri:
+              <ul style={{margin: '5px 0', paddingLeft: '20px'}}>
+                {passwordErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <button className={styles.submit} disabled={!canSubmit}>{submitting ? 'Gönderiliyor…' : 'Kayıt Ol'}</button>
         </form>
         <footer className={styles.footer}>

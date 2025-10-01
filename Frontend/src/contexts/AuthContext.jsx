@@ -23,14 +23,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function tryAutoLogin() {
       try {
+        console.log('🔍 AuthContext: Trying auto login...');
         const base = import.meta.env.VITE_API_URL || '/api';
         const response = await fetch(`${base}/auth/refresh`, {
           method: 'POST',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'X-Requested-By': 'IncomeExpenses-Frontend'
+          }
         });
+        
+        console.log('🔄 Refresh response:', response.status);
         
         if (response.ok) {
           const data = await response.json();
+          console.log('✅ Refresh success, setting user...');
           setApiAccessToken(data.accessToken); // Update apiClient token
           setAccessTokenState(data.accessToken);
           
@@ -41,12 +48,19 @@ export function AuthProvider({ children }) {
           
           if (userResponse.ok) {
             const userData = await userResponse.json();
+            console.log('✅ User data loaded:', userData.email);
             setUser(userData);
+          } else {
+            console.log('❌ /me failed:', userResponse.status);
           }
+        } else {
+          const errorText = await response.text();
+          console.log('❌ Refresh failed:', response.status, errorText);
         }
       } catch (error) {
-        console.log('Auto login failed:', error);
+        console.log('❌ Auto login failed:', error);
       } finally {
+        console.log('🏁 Auto login finished, setting loading false');
         setLoading(false);
       }
     }
@@ -111,6 +125,14 @@ export function AuthProvider({ children }) {
     setApiAccessToken(token);
     setAccessTokenState(token);
     setUser(userLike);
+    // Persist for guards and reloads
+    try {
+      localStorage.setItem('accessToken', token);
+      localStorage.setItem('user', JSON.stringify(userLike));
+      if (userLike?.role === 'ADMIN') {
+        localStorage.setItem('lastLoginTime', Date.now().toString());
+      }
+    } catch {}
   };
 
   const register = async (email, password, name) => {
@@ -127,13 +149,13 @@ export function AuthProvider({ children }) {
     const userId = response?.id;
     console.log('🔍 UserId extracted:', userId);
     
-    // E-posta doğrulama gönder
-    if (userId) {
+    // E-posta doğrulama gönder (geçici olarak disable)
+    if (userId && false) { // Geçici olarak kapatıldı
       console.log('📧 Sending email verification for userId:', userId);
       await apiClient.post('/auth/email/send', { userId });
       console.log('✅ Email verification sent');
     } else {
-      console.log('❌ No userId found, skipping email send');
+      console.log('⏸️ Email verification disabled for development');
     }
 
     return { userId, email };
@@ -161,7 +183,10 @@ export function AuthProvider({ children }) {
       const base = import.meta.env.VITE_API_URL || '/api';
       const response = await fetch(`${base}/auth/refresh`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'X-Requested-By': 'IncomeExpenses-Frontend'
+        }
       });
 
       if (response.ok) {

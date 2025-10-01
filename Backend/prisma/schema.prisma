@@ -29,6 +29,7 @@ model User {
   refreshTokens RefreshToken[]
   emailVerificationTokens EmailVerificationToken[]
   twoFABackups TwoFABackup[]
+  passwordHistory UserPasswordHistory[]
 }
 
 model Transaction {
@@ -132,4 +133,14 @@ model SecurityLog {
   @@index([level])
   @@index([type])
   @@index([userId])
+}
+
+model UserPasswordHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  passwordHash String   // Peppered + bcrypt hash
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, createdAt])
 }

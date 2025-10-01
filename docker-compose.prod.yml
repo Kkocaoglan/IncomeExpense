@@ -124,6 +124,28 @@ services:
       timeout: 10s
       retries: 3
 
+  # ClamAV for malware scanning
+  clamav:
+    image: clamav/clamav:latest
+    container_name: income_expenses_clamav
+    restart: unless-stopped
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=false
+      - CLAMAV_NO_CLAMD=false
+    volumes:
+      - clamav_data:/var/lib/clamav
+      - ./Backend/uploads:/scan:ro
+    ports:
+      - "127.0.0.1:3310:3310"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 60s
+      timeout: 120s
+      retries: 3
+      start_period: 300s
+
   # Certbot for SSL certificates
   certbot:
     image: certbot/certbot
@@ -148,4 +170,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  clamav_data:
     driver: local

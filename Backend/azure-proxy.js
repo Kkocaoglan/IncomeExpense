@@ -3,7 +3,9 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
 const { DocumentAnalysisClient, AzureKeyCredential } = require('@azure/ai-form-recognizer');
+const { performSecurityScan, logFileSecurityEvent } = require('./src/lib/fileSecurityUtils');
 
 const app = express();
 // Güvenli dosya yükleme konfigürasyonu
@@ -54,9 +56,23 @@ const ocrLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// P2 - Stricter per-minute OCR limiter
+const ocrStrictLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 dakika
+  max: Number(process.env.RATE_OCR_PER_MIN) || 3, // Dakikada 3 istek
+  message: {
+    error: 'OCR rate limit exceeded',
+    message: 'Dakikada en fazla 3 OCR isteği gönderebilirsiniz',
+    retryAfter: 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use('/ocr/', ocrLimiter); // OCR endpoint'lerine rate limiting uygula
+app.use('/ocr/', ocrStrictLimiter); // P2 - Stricter OCR rate limiting
 
 // Türkçe fiş formatlarını tanıma fonksiyonu
 function extractReceiptData(content) {
@@ -153,8 +169,8 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
   return handleAnalyze(req, res);
 });
 
-// New API route structure
-app.post('/ocr/analyze', upload.single('file'), async (req, res) => {
+// New API route structure with higher JSON limit for OCR payloads
+app.post('/ocr/analyze', express.json({ limit: '10mb' }), upload.single('file'), async (req, res) => {
   return handleAnalyze(req, res);
 });
 
@@ -168,6 +184,31 @@ async function handleAnalyze(req, res) {
 
     console.log('Dosya alındı:', req.file.originalname);
     filePath = req.file.path;
+
+    // 🔒 SECURITY SCAN - Magic number validation ve ClamAV
+    console.log('🔍 Güvenlik taraması başlatılıyor...');
+    const securityResult = await performSecurityScan(filePath, { useClamAV: true });
+    
+    // Security event log
+    await logFileSecurityEvent(securityResult, req.user?.id || 'anonymous', req);
+    
+    if (!securityResult.isSecure) {
+      // Güvensiz dosyayı hemen sil
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (unlinkError) {
+        console.error('Temp dosya silme hatası:', unlinkError);
+      }
+      
+      return res.status(400).json({ 
+        error: 'security_threat_detected',
+        message: 'Dosya güvenlik taramasından geçemedi',
+        reason: securityResult.failureReason,
+        details: securityResult.checks
+      });
+    }
+    
+    console.log('✅ Güvenlik taraması başarılı, Azure analizi başlatılıyor...');
 
     // Dosyayı stream olarak oku
     const fileStream = fs.createReadStream(filePath);
