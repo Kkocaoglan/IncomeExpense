@@ -64,10 +64,11 @@ jobs:
     - name: Start application
       run: |
         cd Backend
-        npm run start &
-        sleep 30
+        nohup npm run start > ../app.log 2>&1 &
+        echo $! > ../app.pid
       env:
         NODE_ENV: test
+        PORT: 5001
         DATABASE_URL: postgresql://test:test@localhost:5432/test_db
         REDIS_URL: redis://localhost:6379
         JWT_ACCESS_SECRET: test_secret_at_least_32_chars_long_key
@@ -75,10 +76,23 @@ jobs:
         PEPPER: test_pepper_at_least_32_chars_long_for_password_hashing
         EMAIL_VERIFICATION_REQUIRED: false
         ENABLE_2FA: false
+        CONSOLE_MAILER: true
         
     - name: Wait for application
       run: |
-        timeout 60 bash -c 'until curl -f http://localhost:5001/healthz; do sleep 2; done'
+        echo "Waiting for backend to start..."
+        for i in {1..30}; do
+          if curl -f http://localhost:5001/healthz 2>/dev/null; then
+            echo "✅ Backend is ready!"
+            exit 0
+          fi
+          echo "Attempt $i: Backend not ready yet, waiting..."
+          sleep 2
+        done
+        echo "❌ Backend failed to start after 60 seconds"
+        echo "=== Application logs ==="
+        cat app.log || echo "No logs found"
+        exit 1
         
     - name: Run OWASP ZAP Baseline Scan
       uses: zaproxy/action-baseline@v0.7.0
